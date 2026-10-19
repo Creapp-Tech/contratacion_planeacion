@@ -1,0 +1,54 @@
+import Link from "next/link"
+import { Suspense } from "react"
+import { ArrowLeftIcon } from "lucide-react"
+import { cn } from "cn"
+
+import { buttonVariants } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { CATALOGOS, type CatalogoDominio } from "@/lib/catalogos/dominios"
+
+import { CatalogoNuevoContenido } from "./catalogo-nuevo-contenido"
+
+function FormSkeleton() {
+  return <Skeleton className="h-14 w-full" />
+}
+
+export function CatalogoNuevoPage({ dominio }: { dominio: CatalogoDominio }) {
+  const config = CATALOGOS[dominio]
+
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      <Link
+        href={config.ruta}
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "-ml-2 w-fit"
+        )}
+      >
+        <ArrowLeftIcon />
+        Volver a {config.titulo.toLowerCase()}
+      </Link>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading">Nuevo {config.singular}</CardTitle>
+          <CardDescription>
+            Registra un nuevo {config.singular} en el sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Suspense fallback={<FormSkeleton />}>
+            <CatalogoNuevoContenido dominio={dominio} />
+          </Suspense>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
