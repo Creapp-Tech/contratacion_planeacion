@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
-import { requireSuperadmin } from "@/lib/auth/session"
+import {
+  puedeGestionarRegional,
+  requireAccesoPlaneacion,
+} from "@/lib/auth/session"
 import { etiquetaEstadoSede, varianteEstadoSede } from "@/lib/sedes/estados"
 import { getSede } from "@/lib/sedes/queries"
 
@@ -46,12 +49,12 @@ export async function SedeDetalleContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  const usuario = await requireAccesoPlaneacion()
 
   const { id } = await params
   const sede = await getSede(id)
 
-  if (!sede) {
+  if (!sede || !(await puedeGestionarRegional(usuario, sede.regional))) {
     notFound()
   }
 

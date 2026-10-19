@@ -1,4 +1,4 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { mismaRegional, requireAlcancePlaneacion } from "@/lib/auth/session"
 import {
   aplanarPoblacion,
   AREAS_NINGUNA,
@@ -41,13 +41,17 @@ export async function CapacidadContenido({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireSuperadmin()
+  const alcance = await requireAlcancePlaneacion()
+  const enAlcance = (regional: string | null) =>
+    alcance.verTodo || mismaRegional(regional, alcance.regional)
 
   const params = await searchParams
   const tab = pick(params.tab) === "poblacion" ? "poblacion" : "infraestructura"
 
   if (tab === "poblacion") {
-    const sedes = await listSedesPoblacion()
+    const sedes = (await listSedesPoblacion()).filter((sede) =>
+      enAlcance(sede.regional)
+    )
 
     const filtros: FiltrosPoblacion = {
       regional: pick(params.p_regional),
@@ -80,6 +84,12 @@ export async function CapacidadContenido({
     listFrecuenciasAreas(),
   ])
 
+  const sedesEnAlcance = sedes.filter((sede) => enAlcance(sede.regional))
+  const sedeIds = new Set(sedesEnAlcance.map((sede) => sede.id))
+  const frecuenciasEnAlcance = frecuencias.filter((fila) =>
+    sedeIds.has(fila.sedeId)
+  )
+
   const tipoPoblacion =
     pick(params.i_tipo) === "pagada"
       ? "pagada"
@@ -104,9 +114,9 @@ export async function CapacidadContenido({
     <div className="flex flex-col gap-4">
       <CapacidadTabs />
       <InfraVista
-        sedes={sedes}
-        frecuencias={frecuencias}
-        opciones={opcionesInfra(sedes)}
+        sedes={sedesEnAlcance}
+        frecuencias={frecuenciasEnAlcance}
+        opciones={opcionesInfra(sedesEnAlcance)}
         filtros={filtros}
       />
     </div>

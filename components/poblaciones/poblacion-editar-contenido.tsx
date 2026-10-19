@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import {
+  puedeGestionarRegional,
+  requireEditorPlaneacion,
+} from "@/lib/auth/session"
 import { getPoblacion, opcionesPoblaciones } from "@/lib/poblaciones/queries"
 
 import { PoblacionForm } from "./poblacion-form"
@@ -10,7 +13,7 @@ export async function PoblacionEditarContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  const usuario = await requireEditorPlaneacion()
 
   const { id } = await params
   const [poblacion, opciones] = await Promise.all([
@@ -19,6 +22,12 @@ export async function PoblacionEditarContenido({
   ])
 
   if (!poblacion) {
+    notFound()
+  }
+
+  if (
+    !(await puedeGestionarRegional(usuario, poblacion.sedes?.regional ?? null))
+  ) {
     notFound()
   }
 

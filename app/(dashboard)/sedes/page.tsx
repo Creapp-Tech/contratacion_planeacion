@@ -7,6 +7,8 @@ import { cn } from "cn"
 import { SedesContenido } from "@/components/sedes/sedes-contenido"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getCurrentUsuario } from "@/lib/auth/session"
+import { puedeEditarPlaneacion } from "@/lib/constants/roles"
 
 export const metadata: Metadata = {
   title: "Sedes",
@@ -19,6 +21,19 @@ function TablaSkeleton() {
       <Skeleton className="h-24 w-full rounded-xl" />
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>
+  )
+}
+
+async function BotonNuevaSede() {
+  const usuario = await getCurrentUsuario()
+
+  if (!puedeEditarPlaneacion(usuario?.rol ?? "")) return null
+
+  return (
+    <Link href="/sedes/nuevo" className={cn(buttonVariants())}>
+      <PlusIcon />
+      Nueva sede
+    </Link>
   )
 }
 
@@ -37,10 +52,9 @@ export default function SedesPage({
           </p>
         </div>
 
-        <Link href="/sedes/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nueva sede
-        </Link>
+        <Suspense fallback={null}>
+          <BotonNuevaSede />
+        </Suspense>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import {
+  puedeGestionarRegional,
+  requireEditorPlaneacion,
+} from "@/lib/auth/session"
 import {
   getSede,
   listAreasCatalogo,
@@ -15,7 +18,7 @@ export async function SedeEditarContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  const usuario = await requireEditorPlaneacion()
 
   const { id } = await params
   const [sede, opciones, areasCatalogo, aseguradores] = await Promise.all([
@@ -26,6 +29,10 @@ export async function SedeEditarContenido({
   ])
 
   if (!sede) {
+    notFound()
+  }
+
+  if (!(await puedeGestionarRegional(usuario, sede.regional))) {
     notFound()
   }
 

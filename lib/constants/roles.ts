@@ -19,6 +19,32 @@ export function rolLabel(value: string) {
   return ROLES.find((rol) => rol.value === value)?.label ?? value
 }
 
+export const ROLES_PLANEACION: Rol[] = [
+  "superadmin",
+  "ceo",
+  "gerente_general",
+  "gerente_nacional",
+  "director_nacional",
+  "gerente_regional",
+  "profesional_planeacion",
+]
+
+export function puedeAccederPlaneacion(rol: string): boolean {
+  return (ROLES_PLANEACION as readonly string[]).includes(rol)
+}
+
+export function esGerenteRegional(rol: string): boolean {
+  return rol === "gerente_regional"
+}
+
+export function alcanceTotal(rol: string): boolean {
+  return !esGerenteRegional(rol)
+}
+
+export function puedeEditarPlaneacion(rol: string): boolean {
+  return rol === "superadmin" || esGerenteRegional(rol)
+}
+
 export const ESTADOS = [
   { value: "activo", label: "Activo" },
   { value: "inactivo", label: "Inactivo" },

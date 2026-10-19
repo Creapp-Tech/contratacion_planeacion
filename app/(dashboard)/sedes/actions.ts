@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import {
+  puedeGestionarRegional,
+  regionalNombre,
+  requireSuperadmin,
+  usuarioEditor,
+} from "@/lib/auth/session"
+import { alcanceTotal } from "@/lib/constants/roles"
 import {
   mapearFila,
   normalizarNombre,
@@ -85,19 +91,31 @@ async function sincronizarRelaciones(
 export async function crearSede(
   input: SedeInput
 ): Promise<SedeActionResult> {
-  await requireSuperadmin()
+  const usuario = await usuarioEditor()
+  if (!usuario) {
+    return { error: "No tienes permiso para realizar esta acción" }
+  }
 
   const parsed = sedeSchema.safeParse(input)
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" }
   }
 
+  let datos: SedeOutput = parsed.data
+  if (!alcanceTotal(usuario.rol)) {
+    const propia = await regionalNombre(usuario.regional_id)
+    if (!propia) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
+    datos = { ...datos, regional: propia }
+  }
+
   const admin = createAdminClient()
-  const { areas, aseguradores } = parsed.data
+  const { areas, aseguradores } = datos
 
   const { data, error } = await admin
     .from("sedes")
-    .insert([construirPayload(parsed.data)])
+    .insert([construirPayload(datos)])
     .select("id")
     .single()
 
@@ -122,7 +140,10 @@ export async function actualizarSede(
   id: string,
   input: SedeInput
 ): Promise<SedeActionResult> {
-  await requireSuperadmin()
+  const usuario = await usuarioEditor()
+  if (!usuario) {
+    return { error: "No tienes permiso para realizar esta acción" }
+  }
 
   const parsed = sedeSchema.safeParse(input)
   if (!parsed.success) {
@@ -130,11 +151,40 @@ export async function actualizarSede(
   }
 
   const admin = createAdminClient()
-  const { areas, aseguradores } = parsed.data
+
+  const { data: actual } = await admin
+    .from("sedes")
+    .select("regional")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (!actual) {
+    return { error: "La sede no existe" }
+  }
+
+  if (
+    !(await puedeGestionarRegional(
+      usuario,
+      (actual as { regional: string | null }).regional
+    ))
+  ) {
+    return { error: "Solo puedes gestionar sedes de tu regional" }
+  }
+
+  let datos: SedeOutput = parsed.data
+  if (!alcanceTotal(usuario.rol)) {
+    const propia = await regionalNombre(usuario.regional_id)
+    if (!propia) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
+    datos = { ...datos, regional: propia }
+  }
+
+  const { areas, aseguradores } = datos
 
   const { error } = await admin
     .from("sedes")
-    .update(construirPayload(parsed.data))
+    .update(construirPayload(datos))
     .eq("id", id)
 
   if (error) return { error: error.message }
@@ -156,9 +206,33 @@ export async function actualizarSede(
 }
 
 export async function cerrarSede(id: string): Promise<SedeActionResult> {
-  await requireSuperadmin()
+  const usuario = await usuarioEditor()
+  if (!usuario) {
+    return { error: "No tienes permiso para realizar esta acción" }
+  }
 
-  const { error } = await createAdminClient()
+  const admin = createAdminClient()
+
+  const { data: actual } = await admin
+    .from("sedes")
+    .select("regional")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (!actual) {
+    return { error: "La sede no existe" }
+  }
+
+  if (
+    !(await puedeGestionarRegional(
+      usuario,
+      (actual as { regional: string | null }).regional
+    ))
+  ) {
+    return { error: "Solo puedes gestionar sedes de tu regional" }
+  }
+
+  const { error } = await admin
     .from("sedes")
     .update({
       estado: "inactiva",

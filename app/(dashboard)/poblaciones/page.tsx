@@ -7,6 +7,8 @@ import { cn } from "cn"
 import { PoblacionesContenido } from "@/components/poblaciones/poblaciones-contenido"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getCurrentUsuario } from "@/lib/auth/session"
+import { puedeEditarPlaneacion } from "@/lib/constants/roles"
 
 export const metadata: Metadata = {
   title: "Población",
@@ -18,6 +20,19 @@ function TablaSkeleton() {
       <Skeleton className="h-24 w-full rounded-xl" />
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>
+  )
+}
+
+async function BotonNuevaPoblacion() {
+  const usuario = await getCurrentUsuario()
+
+  if (!puedeEditarPlaneacion(usuario?.rol ?? "")) return null
+
+  return (
+    <Link href="/poblaciones/nuevo" className={cn(buttonVariants())}>
+      <PlusIcon />
+      Nueva población
+    </Link>
   )
 }
 
@@ -36,10 +51,9 @@ export default function PoblacionesPage({
           </p>
         </div>
 
-        <Link href="/poblaciones/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nueva población
-        </Link>
+        <Suspense fallback={null}>
+          <BotonNuevaPoblacion />
+        </Suspense>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import {
+  puedeGestionarRegional,
+  requireAccesoPlaneacion,
+} from "@/lib/auth/session"
 import { getPoblacion } from "@/lib/poblaciones/queries"
 
 function Dato({
@@ -36,12 +39,18 @@ export async function PoblacionDetalleContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  const usuario = await requireAccesoPlaneacion()
 
   const { id } = await params
   const poblacion = await getPoblacion(id)
 
   if (!poblacion) {
+    notFound()
+  }
+
+  if (
+    !(await puedeGestionarRegional(usuario, poblacion.sedes?.regional ?? null))
+  ) {
     notFound()
   }
 

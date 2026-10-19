@@ -1,4 +1,4 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireEditorPlaneacion } from "@/lib/auth/session"
 import {
   listAreasCatalogo,
   listAseguradores,
@@ -8,7 +8,7 @@ import {
 import { SedeForm } from "./sede-form"
 
 export async function SedeNuevoContenido() {
-  await requireSuperadmin()
+  await requireEditorPlaneacion()
 
   const [opciones, areasCatalogo, aseguradores] = await Promise.all([
     listOpcionesCatalogo(),

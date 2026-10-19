@@ -161,7 +161,7 @@ export async function listSedes(
     query = query.eq("departamento", filtros.departamento)
   }
   if (filtros.regional) {
-    query = query.eq("regional", filtros.regional)
+    query = query.ilike("regional", filtros.regional)
   }
   if (filtros.marca) {
     query = query.eq("marca", filtros.marca)

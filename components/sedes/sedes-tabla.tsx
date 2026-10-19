@@ -39,9 +39,11 @@ function Kpi({
 export function SedesTabla({
   sedes,
   resumen,
+  puedeEditar = false,
 }: {
   sedes: SedeListaFila[]
   resumen: ResumenSedes
+  puedeEditar?: boolean
 }) {
   const delta = resumen.capacidadActual - resumen.capacidadInicial
   const consultoriosDisponibles =
@@ -134,6 +136,7 @@ export function SedesTabla({
                       id={sede.id}
                       nombre={sede.nombre}
                       estado={sede.estado}
+                      puedeEditar={puedeEditar}
                     />
                   </TableCell>
                 </TableRow>

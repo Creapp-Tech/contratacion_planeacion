@@ -159,7 +159,7 @@ export async function listSedesMapa(
      sedes_aseguradores(aseguradores_eps(nombre_eps))`
   )
 
-  if (filtros.regional) query = query.eq("regional", filtros.regional)
+  if (filtros.regional) query = query.ilike("regional", filtros.regional)
   if (filtros.zonal) query = query.eq("zonal", filtros.zonal)
   if (filtros.marca) query = query.eq("marca", filtros.marca)
   if (filtros.tipoIps) query = query.eq("tipo_ips", filtros.tipoIps)

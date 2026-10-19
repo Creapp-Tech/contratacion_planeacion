@@ -38,7 +38,13 @@ function formatearFecha(fecha: string | null) {
   )
 }
 
-export function PoblacionesTabla({ filas }: { filas: PoblacionFila[] }) {
+export function PoblacionesTabla({
+  filas,
+  puedeEditar = false,
+}: {
+  filas: PoblacionFila[]
+  puedeEditar?: boolean
+}) {
   const resumen = resumenPoblaciones(filas)
 
   return (
@@ -104,6 +110,7 @@ export function PoblacionesTabla({ filas }: { filas: PoblacionFila[] }) {
                       nombre={`${fila.sedes?.nombre ?? "Sede"} · ${
                         fila.aseguradores_eps?.nombre_eps ?? "Asegurador"
                       } · ${fila.regimenes?.nombre ?? "Régimen"}`}
+                      puedeEditar={puedeEditar}
                     />
                   </TableCell>
                 </TableRow>

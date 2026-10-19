@@ -24,7 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import type { Rol } from "@/lib/constants/roles"
+import { ROLES_PLANEACION, type Rol } from "@/lib/constants/roles"
 
 export interface NavItem {
   title: string
@@ -48,25 +48,25 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Sedes",
         href: "/sedes",
         icon: MapPin,
-        roles: ["superadmin"],
+        roles: ROLES_PLANEACION,
       },
       {
         title: "Mapa de sedes",
         href: "/sedes/mapa",
         icon: Map,
-        roles: ["superadmin"],
+        roles: ROLES_PLANEACION,
       },
       {
         title: "Análisis de capacidad instalada",
         href: "/capacidad-instalada",
         icon: BarChart3,
-        roles: ["superadmin"],
+        roles: ROLES_PLANEACION,
       },
       {
         title: "Población",
         href: "/poblaciones",
         icon: Users,
-        roles: ["superadmin"],
+        roles: ROLES_PLANEACION,
       },
       {
         title: "Frecuencias de uso",

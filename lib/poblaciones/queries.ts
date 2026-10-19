@@ -75,7 +75,7 @@ export async function listPoblaciones(
   }
 
   if (filtros.regional) {
-    query = query.eq("sedes.regional", filtros.regional)
+    query = query.ilike("sedes.regional", filtros.regional)
   }
 
   if (filtros.departamento) {

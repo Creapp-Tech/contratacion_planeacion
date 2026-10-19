@@ -22,9 +22,14 @@ import { Button, buttonVariants } from "@/components/ui/button"
 type PoblacionAccionesProps = {
   id: string
   nombre: string
+  puedeEditar: boolean
 }
 
-export function PoblacionAcciones({ id, nombre }: PoblacionAccionesProps) {
+export function PoblacionAcciones({
+  id,
+  nombre,
+  puedeEditar,
+}: PoblacionAccionesProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,54 +57,61 @@ export function PoblacionAcciones({ id, nombre }: PoblacionAccionesProps) {
       >
         <EyeIcon />
       </Link>
-      <Link
-        href={`/poblaciones/${id}/editar`}
-        aria-label={`Editar ${nombre}`}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-      >
-        <PencilIcon />
-      </Link>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Borrar ${nombre}`}
-        onClick={() => {
-          setError(null)
-          setOpen(true)
-        }}
-      >
-        <Trash2Icon />
-      </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Borrar población</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará la población registrada de {nombre}. Esta acción no se
-              puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
-              Borrar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {puedeEditar ? (
+        <>
+          <Link
+            href={`/poblaciones/${id}/editar`}
+            aria-label={`Editar ${nombre}`}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon-sm" })
+            )}
+          >
+            <PencilIcon />
+          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Borrar ${nombre}`}
+            onClick={() => {
+              setError(null)
+              setOpen(true)
+            }}
+          >
+            <Trash2Icon />
+          </Button>
+
+          <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Borrar población</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se eliminará la población registrada de {nombre}. Esta acción
+                  no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={pending}
+                  onClick={onConfirm}
+                >
+                  {pending ? <Loader2Icon className="animate-spin" /> : null}
+                  Borrar
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      ) : null}
     </div>
   )
 }
