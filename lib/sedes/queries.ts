@@ -199,6 +199,11 @@ export function resumenSedes(sedes: SedeListaFila[]): ResumenSedes {
   )
 }
 
+type SedeCruda = Omit<SedeDetalle, "areas" | "aseguradores"> & {
+  sedes_areas: SedeArea[] | null
+  sedes_aseguradores: SedeAsegurador[] | null
+}
+
 export async function getSede(id: string): Promise<SedeDetalle | null> {
   const { data, error } = await createAdminClient()
     .from("sedes")
@@ -211,11 +216,11 @@ export async function getSede(id: string): Promise<SedeDetalle | null> {
   if (error) throw error
   if (!data) return null
 
-  const sede = data as SedeDetalle
+  const { sedes_areas, sedes_aseguradores, ...sede } = data as SedeCruda
   return {
     ...sede,
-    areas: sede.areas ?? [],
-    aseguradores: sede.aseguradores ?? [],
+    areas: sedes_areas ?? [],
+    aseguradores: sedes_aseguradores ?? [],
   }
 }
 

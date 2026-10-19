@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { cn } from "cn"
 
 import { Badge } from "@/components/ui/badge"
 import {
@@ -6,7 +7,7 @@ import {
   requireAccesoPlaneacion,
 } from "@/lib/auth/session"
 import { etiquetaEstadoSede, varianteEstadoSede } from "@/lib/sedes/estados"
-import { getSede } from "@/lib/sedes/queries"
+import { getSede, type SedeArea } from "@/lib/sedes/queries"
 
 function Dato({
   label,
@@ -31,17 +32,32 @@ function numero(value: number | null) {
 
 function Seccion({
   titulo,
+  className,
   children,
 }: {
   titulo: string
+  className?: string
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2", className)}>
       <h2 className="font-heading text-lg font-semibold">{titulo}</h2>
       {children}
     </div>
   )
+}
+
+const GRID_AREAS = "grid grid-cols-[1fr_5rem_5rem_5rem] items-center gap-2"
+
+function agruparAreas(areas: SedeArea[]) {
+  const mapa = new Map<string, SedeArea[]>()
+  for (const area of areas) {
+    const categoria = area.areas_catalogo?.categoria ?? "Sin categoría"
+    const lista = mapa.get(categoria) ?? []
+    lista.push(area)
+    mapa.set(categoria, lista)
+  }
+  return [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0]))
 }
 
 export async function SedeDetalleContenido({
@@ -59,7 +75,7 @@ export async function SedeDetalleContenido({
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="grid gap-8 xl:grid-cols-2">
       <Seccion titulo="Identificación">
         <dl className="flex flex-col">
           <Dato label="Nombre" value={sede.nombre} />
@@ -118,32 +134,88 @@ export async function SedeDetalleContenido({
         </dl>
       </Seccion>
 
-      <Seccion titulo="Áreas de la sede">
+      <Seccion titulo="Áreas de la sede" className="xl:col-span-2">
         {sede.areas.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hay áreas asignadas.
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
-            {sede.areas.map((area) => {
-              const disponibles = area.cantidad - area.cantidad_habilitada
+          <div className="grid gap-4 lg:grid-cols-2">
+            {agruparAreas(sede.areas).map(([categoria, areas]) => {
+              const existentes = areas.reduce(
+                (total, area) => total + area.cantidad,
+                0
+              )
+              const habilitadas = areas.reduce(
+                (total, area) => total + area.cantidad_habilitada,
+                0
+              )
+              const disponibles = existentes - habilitadas
               return (
-                <li key={area.id} className="text-sm">
-                  {area.areas_catalogo?.nombre ?? "Área"}{" "}
-                  <span className="text-muted-foreground">
-                    ({area.areas_catalogo?.categoria ?? "—"})
-                  </span>{" "}
-                  · {area.cantidad_habilitada} de {area.cantidad} habilitadas
-                  {disponibles > 0 ? (
-                    <span className="text-muted-foreground">
-                      {" "}
-                      ({disponibles} disponible{disponibles === 1 ? "" : "s"})
-                    </span>
-                  ) : null}
-                </li>
+                <div key={categoria} className="flex flex-col gap-1.5">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    {categoria}
+                  </h3>
+                  <div className="divide-y rounded-lg border">
+                    <div
+                      className={cn(
+                        GRID_AREAS,
+                        "px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                      )}
+                    >
+                      <span>Área</span>
+                      <span className="text-center">Existentes</span>
+                      <span className="text-center">Habilitadas</span>
+                      <span className="text-center">Disponibles</span>
+                    </div>
+                    {areas.map((area) => {
+                      const disp =
+                        area.cantidad - area.cantidad_habilitada
+                      return (
+                        <div
+                          key={area.id}
+                          className={cn(GRID_AREAS, "px-3 py-1.5 text-sm")}
+                        >
+                          <span>{area.areas_catalogo?.nombre ?? "Área"}</span>
+                          <span className="text-center tabular-nums">
+                            {numero(area.cantidad)}
+                          </span>
+                          <span className="text-center tabular-nums">
+                            {numero(area.cantidad_habilitada)}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-center tabular-nums",
+                              disp === 0 && "text-muted-foreground"
+                            )}
+                          >
+                            {numero(disp)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                    <div
+                      className={cn(
+                        GRID_AREAS,
+                        "bg-muted/40 px-3 py-1.5 text-sm font-medium"
+                      )}
+                    >
+                      <span>Total</span>
+                      <span className="text-center tabular-nums">
+                        {numero(existentes)}
+                      </span>
+                      <span className="text-center tabular-nums">
+                        {numero(habilitadas)}
+                      </span>
+                      <span className="text-center tabular-nums">
+                        {numero(disponibles)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )
             })}
-          </ul>
+          </div>
         )}
       </Seccion>
 

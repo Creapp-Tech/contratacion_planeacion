@@ -35,7 +35,7 @@ export default function SedeDetallePage({
   params: Promise<{ id: string }>
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href="/sedes"
         className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit")}
