@@ -42,12 +42,16 @@ export type FiltrosPoblacion = {
   capacidad: CapacidadTipo
   poblacion: PoblacionTipo
   categoria?: CategoriaOcupacion
+  departamento?: string
+  municipio?: string
 }
 
 export type SedePoblacion = {
   sedeId: string
   sede: string
   regional: string
+  departamento: string | null
+  municipio: string | null
   capacidadInicial: number | null
   capacidadActual: number | null
   filasEps: {
@@ -62,6 +66,8 @@ export type OpcionesPoblacion = {
   regionales: string[]
   sedes: { id: string; nombre: string; regional: string }[]
   eps: string[]
+  departamentos: string[]
+  municipios: string[]
 }
 
 export type FiltrosInfra = {
@@ -155,6 +161,8 @@ export function aplanarPoblacion(sedes: SedePoblacionCruda[]): SedePoblacion[] {
     sedeId: sede.id,
     sede: sede.nombre,
     regional: (sede.regional ?? "").trim() || "Sin regional",
+    departamento: sede.departamento,
+    municipio: sede.municipio,
     capacidadInicial:
       sede.capacidad_inicial == null ? null : Number(sede.capacidad_inicial),
     capacidadActual:
@@ -179,6 +187,8 @@ export function opcionesPoblacion(
       regional: sede.regional,
     })),
     eps: unicos(sedes.flatMap((sede) => sede.filasEps.map((fila) => fila.eps))),
+    departamentos: unicos(sedes.map((sede) => sede.departamento)),
+    municipios: unicos(sedes.map((sede) => sede.municipio)),
   }
 }
 
@@ -189,6 +199,8 @@ export function filtrarPoblacion(
   return sedes
     .filter((sede) => !filtros.regional || sede.regional === filtros.regional)
     .filter((sede) => !filtros.sede || sede.sedeId === filtros.sede)
+    .filter((sede) => !filtros.departamento || sede.departamento === filtros.departamento)
+    .filter((sede) => !filtros.municipio || sede.municipio === filtros.municipio)
     .map((sede) => {
       const filasEps = filtros.eps
         ? sede.filasEps.filter((fila) => fila.eps === filtros.eps)

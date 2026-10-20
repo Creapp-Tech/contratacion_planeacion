@@ -1,5 +1,7 @@
 "use client"
 
+import { useParametrosBusqueda } from "../use-parametros"
+import { useState, useEffect } from "react"
 import { Loader2Icon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,8 +19,7 @@ import type {
   OpcionesPoblacion,
   PoblacionTipo,
 } from "@/lib/capacidad/agregaciones"
-
-import { useParametrosBusqueda } from "../use-parametros"
+import { listMunicipiosByDepartamento } from "@/lib/sedes/queries"
 
 const ALL = "__all__"
 const PARAM = {
@@ -74,9 +75,48 @@ export function PobFiltros({
     { value: "pagada", label: "Pagada" },
     { value: "certificada", label: "Certificada" },
   ]
+  const departamentoOptions: { value: string; label: string }[] = [
+    { value: ALL, label: "Todos los departamentos" },
+    ...opciones.departamentos.map((value) => ({ value, label: value })),
+  ]
+  const municipioOptionsRaw = [
+    { value: ALL, label: "Todos los municipios" },
+    ...opciones.municipios.map((value) => ({ value, label: value })),
+  ]
+
+  const [departamento, setDepartamento] = useState<string | undefined>(
+    filtros.departamento
+  )
+  const [municipio, setMunicipio] = useState<string | undefined>(filtros.municipio)
+
+  const [municipioOptions, setMunicipioOptions] = useState<{
+    value: string
+    label: string
+  }[]>([])
+
+  useEffect(() => {
+    async function cargarMunicipios() {
+      if (departamento) {
+        const municipios = await listMunicipiosByDepartamento(departamento)
+        setMunicipioOptions(
+          municipios.map((m) => ({ value: m, label: m }))
+        )
+        setMunicipio(undefined)
+      } else {
+        setMunicipioOptions(
+          municipioOptionsRaw.filter((o) => o.value !== ALL).map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))
+        )
+        setMunicipio(undefined)
+      }
+    }
+    cargarMunicipios()
+  }, [departamento])
 
   const hayFiltros = Boolean(
-    filtros.regional || filtros.sede || filtros.eps
+    filtros.regional || filtros.sede || filtros.eps || filtros.departamento || filtros.municipio
   )
 
   return (
@@ -104,6 +144,56 @@ export function PobFiltros({
                 {option.label}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="pob-departamento" className="text-xs text-muted-foreground">
+          Departamento
+        </Label>
+        <Select
+          value={departamento ?? ALL}
+          onValueChange={(next) =>
+            setDepartamento(next === ALL || next == null ? undefined : next)
+          }
+          items={toItems("Todos los departamentos", opciones.departamentos)}
+        >
+          <SelectTrigger id="pob-departamento" className="w-full sm:w-52">
+            <SelectValue placeholder="Departamento" />
+          </SelectTrigger>
+          <SelectContent>
+            {departamentoOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="pob-municipio" className="text-xs text-muted-foreground">
+          Municipio
+        </Label>
+        <Select
+          value={municipio ?? ALL}
+          onValueChange={(next) => setMunicipio(next === ALL || next == null ? undefined : next)}
+          items={toItems("Todos los municipios", municipioOptions.map((o) => o.value as string))}
+        >
+          <SelectTrigger id="pob-municipio" className="w-full sm:w-52">
+            <SelectValue placeholder="Municipio" />
+          </SelectTrigger>
+          <SelectContent>
+            {municipioOptions.length > 0 ? (
+              municipioOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="" disabled>Cargando...</SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>

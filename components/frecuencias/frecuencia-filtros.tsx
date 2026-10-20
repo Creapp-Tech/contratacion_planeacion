@@ -1,7 +1,8 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useState, useEffect } from "react"
+import { useTransition } from "react"
 import { Loader2Icon, SearchIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,9 +18,16 @@ import type {
   FrecuenciaFiltros,
   OpcionesFiltrosFrecuencias,
 } from "@/lib/frecuencias/queries"
-import { TIPOS_FRECUENCIA } from "@/lib/frecuencias/tipos"
+import { listMunicipiosByDepartamento } from "@/lib/sedes/queries"
 
 const ALL = "__all__"
+
+function toItems(placeholder: string, values: string[]) {
+  return Object.fromEntries([
+    [ALL, placeholder],
+    ...values.map((value) => [value, value]),
+  ])
+}
 
 type FiltroSelectProps = {
   id: string
@@ -60,22 +68,6 @@ function FiltroSelect({
   )
 }
 
-function opcionesSelect(
-  placeholder: string,
-  opciones: { id: string; nombre: string }[]
-) {
-  return {
-    items: Object.fromEntries([
-      [ALL, placeholder],
-      ...opciones.map((opcion) => [opcion.id, opcion.nombre]),
-    ]),
-    options: [
-      { value: ALL, label: placeholder },
-      ...opciones.map((opcion) => ({ value: opcion.id, label: opcion.nombre })),
-    ],
-  }
-}
-
 export function FrecuenciaFiltros({
   opciones,
   filtros,
@@ -87,22 +79,94 @@ export function FrecuenciaFiltros({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
-  const [q, setQ] = useState(filtros.q ?? "")
 
-  const tipo = opcionesSelect(
-    "Todos los tipos",
-    TIPOS_FRECUENCIA.map((item) => ({ id: item.value, nombre: item.label }))
+  const [departamento, setDepartamento] = useState<string | undefined>(
+    filtros.departamento
   )
-  const regional = opcionesSelect(
-    "Todas las regionales",
-    opciones.regionales.map((nombre) => ({ id: nombre, nombre }))
-  )
-  const sede = opcionesSelect("Todas las sedes", opciones.sedes)
-  const regimen = opcionesSelect("Todos los regímenes", opciones.regimenes)
-  const asegurador = opcionesSelect(
-    "Todos los aseguradores",
-    opciones.aseguradores
-  )
+  const [municipio, setMunicipio] = useState<string | undefined>(filtros.municipio)
+
+  const [municipioOptions, setMunicipioOptions] = useState<{
+    value: string
+    label: string
+  }[]>([])
+
+  const { q, tipo_frecuencia, sede_id, regional, regimen_id, asegurador_eps_id } =
+    filtros
+
+  useEffect(() => {
+    async function cargarMunicipios() {
+      if (departamento) {
+        const municipios = await listMunicipiosByDepartamento(departamento)
+        setMunicipioOptions(
+          municipios.map((m) => ({ value: m, label: m }))
+        )
+        setMunicipio(undefined)
+      } else {
+        setMunicipioOptions(
+          opciones.departamentos
+            .filter((d) => d !== ALL)
+            .map((d) => ({ value: d, label: d }))
+        )
+        setMunicipio(undefined)
+      }
+    }
+    cargarMunicipios()
+  }, [departamento])
+
+  const tipoSelect = {
+    items: Object.fromEntries([
+      [ALL, "Todos los tipos"],
+      ...TIPOS_FRECUENCIA.map((item) => [item.value, item.label]),
+    ]),
+    options: [
+      { value: ALL, label: "Todos los tipos" },
+      ...TIPOS_FRECUENCIA.map((item) => ({ value: item.value, label: item.label })),
+    ],
+  }
+
+  const regionalSelect = {
+    items: Object.fromEntries([
+      [ALL, "Todas las regionales"],
+      ...opciones.regionales.map((nombre) => [nombre, nombre]),
+    ]),
+    options: [
+      { value: ALL, label: "Todas las regionales" },
+      ...opciones.regionales.map((nombre) => ({ value: nombre, label: nombre })),
+    ],
+  }
+
+  const sedeSelect = {
+    items: Object.fromEntries([
+      [ALL, "Todas las sedes"],
+      ...opciones.sedes.map((sede) => [sede.id, sede.nombre]),
+    ]),
+    options: [
+      { value: ALL, label: "Todas las sedes" },
+      ...opciones.sedes.map((sede) => ({ value: sede.id, label: sede.nombre })),
+    ],
+  }
+
+  const regimenSelect = {
+    items: Object.fromEntries([
+      [ALL, "Todos los regímenes"],
+      ...opciones.regimenes.map((item) => [item.id, item.nombre]),
+    ]),
+    options: [
+      { value: ALL, label: "Todos los regímenes" },
+      ...opciones.regimenes.map((item) => ({ value: item.id, label: item.nombre })),
+    ],
+  }
+
+  const aseguradorSelect = {
+    items: Object.fromEntries([
+      [ALL, "Todos los aseguradores"],
+      ...opciones.aseguradores.map((item) => [item.id, item.nombre]),
+    ]),
+    options: [
+      { value: ALL, label: "Todos los aseguradores" },
+      ...opciones.aseguradores.map((item) => ({ value: item.id, label: item.nombre })),
+    ],
+  }
 
   function updateParams(next: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString())
@@ -119,12 +183,14 @@ export function FrecuenciaFiltros({
   }
 
   const hasFiltros = Boolean(
-    filtros.q ||
-      filtros.tipo_frecuencia ||
-      filtros.sede_id ||
-      filtros.regional ||
-      filtros.regimen_id ||
-      filtros.asegurador_eps_id
+    q ||
+      tipo_frecuencia ||
+      sede_id ||
+      regional ||
+      regimen_id ||
+      asegurador_eps_id ||
+      departamento ||
+      municipio
   )
 
   return (
@@ -148,46 +214,70 @@ export function FrecuenciaFiltros({
 
       <FiltroSelect
         id="filtro-tipo"
-        value={filtros.tipo_frecuencia}
+        value={tipo_frecuencia}
         placeholder="Tipo de frecuencia"
-        items={tipo.items}
-        options={tipo.options}
+        items={tipoSelect.items}
+        options={tipoSelect.options}
         onChange={(value) => updateParams({ tipo_frecuencia: value })}
       />
 
       <FiltroSelect
         id="filtro-regional"
-        value={filtros.regional}
+        value={regional}
         placeholder="Regional"
-        items={regional.items}
-        options={regional.options}
+        items={regionalSelect.items}
+        options={regionalSelect.options}
         onChange={(value) => updateParams({ regional: value })}
       />
 
       <FiltroSelect
+        id="filtro-departamento"
+        value={departamento ?? ALL}
+        placeholder="Departamento"
+        items={toItems("Todos los departamentos", opciones.departamentos)}
+        options={departamentoOptions}
+        onChange={(value) => {
+          setDepartamento(value === ALL ? undefined : value)
+          setMunicipioOptions([])
+          setMunicipio(undefined)
+        }}
+      />
+
+      <FiltroSelect
+        id="filtro-municipio"
+        value={
+          municipio ?? (departamento ? municipioOptions.find((o) => o.value === filtros.municipio)?.value ?? undefined : undefined)
+        }
+        placeholder="Municipio"
+        items={toItems("Todos los municipios", municipioOptions.map((o) => o.value))}
+        options={municipioOptions.length > 0 ? municipioOptions : opciones.departamentos.map((d) => ({ value: d, label: d }))}
+        onChange={(value) => setMunicipio(value)}
+      />
+
+      <FiltroSelect
         id="filtro-sede"
-        value={filtros.sede_id}
+        value={sede_id}
         placeholder="Sede"
-        items={sede.items}
-        options={sede.options}
+        items={sedeSelect.items}
+        options={sedeSelect.options}
         onChange={(value) => updateParams({ sede_id: value })}
       />
 
       <FiltroSelect
         id="filtro-regimen"
-        value={filtros.regimen_id}
+        value={regimen_id}
         placeholder="Régimen"
-        items={regimen.items}
-        options={regimen.options}
+        items={regimenSelect.items}
+        options={regimenSelect.options}
         onChange={(value) => updateParams({ regimen_id: value })}
       />
 
       <FiltroSelect
         id="filtro-asegurador"
-        value={filtros.asegurador_eps_id}
+        value={asegurador_eps_id}
         placeholder="Asegurador"
-        items={asegurador.items}
-        options={asegurador.options}
+        items={aseguradorSelect.items}
+        options={aseguradorSelect.options}
         onChange={(value) => updateParams({ asegurador_eps_id: value })}
       />
 

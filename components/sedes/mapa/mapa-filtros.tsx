@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import { useTransition } from "react"
 import { Loader2Icon, XIcon } from "lucide-react"
 
@@ -13,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { MapaFiltros, OpcionesMapa } from "@/lib/sedes/ocupacion"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 const ALL = "__all__"
 
@@ -74,19 +76,14 @@ export function MapaFiltros({
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
 
-  function updateParams(next: Record<string, string | undefined>) {
-    const params = new URLSearchParams(searchParams.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
-      }
-    }
-    startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`)
-    })
-  }
+  const [departamento, setDepartamento] = useState<string | undefined>(
+    filtros.departamento
+  )
+  const [municipio, setMunicipio] = useState<string | undefined>(
+    filtros.municipio
+  )
+
+  const [municipioOptions, setMunicipioOptions] = useState<{ value: string; label: string }[]>([])
 
   const regionalOptions = [
     { value: ALL, label: "Todas las regionales" },
@@ -108,7 +105,7 @@ export function MapaFiltros({
     { value: ALL, label: "Todos los departamentos" },
     ...opciones.departamentos.map((value) => ({ value, label: value })),
   ]
-  const municipioOptions = [
+  const municipioOptionsRaw = [
     { value: ALL, label: "Todos los municipios" },
     ...opciones.municipios.map((value) => ({ value, label: value })),
   ]
@@ -123,6 +120,46 @@ export function MapaFiltros({
     { value: ALL, label: "Todas las sedes" },
     ...opciones.sedes.map((sede) => ({ value: sede.id, label: sede.nombre })),
   ]
+
+  function updateParams(next: Record<string, string | undefined>) {
+    const params = new URLSearchParams(searchParams.toString())
+    for (const [key, value] of Object.entries(next)) {
+      if (value) {
+        params.set(key, value)
+      } else {
+        params.delete(key)
+      }
+    }
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`)
+    })
+  }
+
+  // Efecto: cargar municipios cuando cambia el departamento
+  useEffect(() => {
+    async function cargarMunicipios() {
+      if (departamento) {
+        const { data, error } = await createAdminClient()
+          .from("sedes")
+          .select("municipio")
+          .eq("departamento", departamento)
+
+        if (error) throw error
+        const municipios = [...new Set((data ?? []).map((f) => f.municipio).filter(Boolean) as string[])].
+          sort((a, b) => a.localeCompare(b))
+        setMunicipioOptions(
+          municipios.map((m) => ({ value: m as string, label: m as string }))
+        )
+        setMunicipio(undefined)
+      } else {
+        setMunicipioOptions(
+          municipioOptionsRaw.filter((o) => o.value !== ALL).map((o) => ({ value: o.value, label: o.label }))
+        )
+        setMunicipio(undefined)
+      }
+    }
+    cargarMunicipios()
+  }, [departamento, municipioOptionsRaw])
 
   const hasFiltros = Boolean(
     filtros.regional ||
@@ -175,20 +212,26 @@ export function MapaFiltros({
 
       <FiltroSelect
         id="mapa-departamento"
-        value={filtros.departamento}
+        value={departamento ?? filtros.departamento}
         placeholder="Departamento"
         items={toItems("Todos los departamentos", opciones.departamentos)}
         options={departamentoOptions}
-        onChange={(value) => updateParams({ departamento: value })}
+        onChange={(value) => {
+          setDepartamento(value === ALL ? undefined : value)
+          setMunicipioOptions([])
+          setMunicipio(undefined)
+        }}
       />
 
       <FiltroSelect
         id="mapa-municipio"
-        value={filtros.municipio}
+        value={
+          municipio ?? (departamento ? municipioOptions.find((o) => o.value === filtros.municipio)?.value ?? undefined : undefined)
+        }
         placeholder="Municipio"
-        items={toItems("Todos los municipios", opciones.municipios)}
-        options={municipioOptions}
-        onChange={(value) => updateParams({ municipio: value })}
+        items={toItems("Todos los municipios", municipioOptions.map((o) => o.value))}
+        options={municipioOptions.length > 0 ? municipioOptions : municipioOptionsRaw}
+        onChange={(value) => setMunicipio(value)}
       />
 
       <FiltroSelect

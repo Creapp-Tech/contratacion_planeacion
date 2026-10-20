@@ -4,6 +4,8 @@ export type SedePoblacionCruda = {
   id: string
   nombre: string
   regional: string | null
+  departamento: string | null
+  municipio: string | null
   capacidad_inicial: number | null
   capacidad_usuarios: number | null
   poblacion_aseguradora: {

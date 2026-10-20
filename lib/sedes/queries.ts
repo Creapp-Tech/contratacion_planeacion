@@ -330,3 +330,47 @@ export async function listOpcionesFiltros(): Promise<OpcionesFiltros> {
     marcas: unicos(filas.map((fila) => fila.marca)),
   }
 }
+
+export async function listMunicipiosByDepartamento(
+  departamento: string
+): Promise<string[]> {
+  const { data, error } = await createAdminClient()
+    .from("sedes")
+    .select("municipio")
+    .eq("departamento", departamento)
+
+  if (error) throw error
+  const valores = (data ?? [] as { municipio: string | null }[]).map((f) => f.municipio).filter(Boolean)
+  return [...new Set(valores)].sort((a, b) => a.localeCompare(b))
+}
+
+export async function listSedesByMunicipio(municipio: string): Promise<SedeRow[]> {
+  const { data, error } = await createAdminClient()
+    .from("sedes")
+    .select("*")
+    .eq("municipio", municipio)
+
+  if (error) throw error
+  return data ?? []
+}
+
+export async function listZonalesByRegional(regional: string): Promise<string[]> {
+  const { data, error } = await createAdminClient()
+    .from("sedes")
+    .select("zonal")
+    .eq("regional", regional)
+
+  if (error) throw error
+  const valores = (data ?? [] as { zonal: string | null }[]).map((f) => f.zonal).filter(Boolean)
+  return [...new Set(valores)].sort((a, b) => a.localeCompare(b))
+}
+
+export async function listSedesByZonal(zonal: string): Promise<SedeRow[]> {
+  const { data, error } = await createAdminClient()
+    .from("sedes")
+    .select("*")
+    .eq("zonal", zonal)
+
+  if (error) throw error
+  return data ?? []
+}

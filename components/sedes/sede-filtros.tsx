@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select"
 import { SEDE_ESTADOS } from "@/lib/sedes/estados"
 import type { OpcionesFiltros, SedeFiltros } from "@/lib/sedes/queries"
+import { DepFiltrosSedes } from "@/components/sedes/sede-dep-filtros"
 
 const ALL = "__all__"
 
@@ -67,9 +68,11 @@ function FiltroSelect({
 export function SedeFiltros({
   opciones,
   filtros,
+  modoDepFiltro = "geografico",
 }: {
   opciones: OpcionesFiltros
   filtros: SedeFiltros
+  modoDepFiltro?: "geografico" | "administrativo"
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -171,6 +174,13 @@ export function SedeFiltros({
         )}
         options={estadoOptions}
         onChange={(value) => updateParams({ estado: value })}
+      />
+
+      <DepFiltrosSedes
+        modo={modoDepFiltro}
+        onSedeSeleccionada={(sede) => {
+          updateParams({ sede: sede.id })
+        }}
       />
 
       {hasFiltros ? (

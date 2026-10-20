@@ -112,6 +112,8 @@ export type FrecuenciaFiltros = {
   regional?: string
   regimen_id?: string
   asegurador_eps_id?: string
+  departamento?: string
+  municipio?: string
 }
 
 export async function listFrecuencias(
@@ -188,6 +190,8 @@ export type OpcionesFiltrosFrecuencias = {
   regionales: string[]
   regimenes: { id: string; nombre: string }[]
   aseguradores: { id: string; nombre: string }[]
+  departamentos: string[]
+  municipios: string[]
 }
 
 export async function listOpcionesFiltrosFrecuencias(): Promise<OpcionesFiltrosFrecuencias> {
@@ -196,7 +200,7 @@ export async function listOpcionesFiltrosFrecuencias(): Promise<OpcionesFiltrosF
   const [sedes, regimenes, aseguradores] = await Promise.all([
     supabase
       .from("sedes")
-      .select("id, nombre, regional")
+      .select("id, nombre, regional, departamento, municipio")
       .order("nombre", { ascending: true }),
     supabase
       .from("regimenes")
@@ -216,6 +220,8 @@ export async function listOpcionesFiltrosFrecuencias(): Promise<OpcionesFiltrosF
     id: string
     nombre: string
     regional: string | null
+    departamento: string | null
+    municipio: string | null
   }[]
 
   const regionales = [
@@ -233,5 +239,7 @@ export async function listOpcionesFiltrosFrecuencias(): Promise<OpcionesFiltrosF
     aseguradores: (
       (aseguradores.data ?? []) as { id: string; nombre_eps: string }[]
     ).map((fila) => ({ id: fila.id, nombre: fila.nombre_eps })),
+    departamentos: [ ...new Set(sedesData.map((sede) => sede.departamento).filter(Boolean)) ].sort((a, b) => a.localeCompare(b)),
+    municipios: [ ...new Set(sedesData.map((sede) => sede.municipio).filter(Boolean)) ].sort((a, b) => a.localeCompare(b)),
   }
 }
