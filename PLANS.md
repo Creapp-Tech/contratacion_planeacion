@@ -13,7 +13,28 @@
 - [ ] Create proyectos module following pattern
 - [ ] Add authentication middleware to all dashboard routes
 
-## Phase 3: Enhancements
+## Phase 3: Contratación
+- [x] Crear migración `0018_modulo_contratos.sql`
+- [x] Crear constantes, validación Zod, queries y server actions
+- [x] Agregar guards de acceso y alcance por regional
+- [x] Crear listado, filtros, tabla y acciones
+- [x] Crear formulario compartido y rutas de crear/ver/editar
+- [x] Agregar grupo "Contratación" al sidebar
+- [x] Aplicar migración en Supabase
+- [x] Ampliar contratos con catálogos, sedes, programas, valores por régimen, vigencia y notas (migración 0022)
+- [x] Aplicar migraciones 0022 y 0012 en Supabase y corregir desplegables, sedes por regional e hidratación de valores
+- [x] Auditar y corregir queries, filtros, detalle y opciones del listado de contratos
+- [x] Validar en servidor relaciones (asegurador, sedes, catálogos, regímenes) y duplicados
+- [x] Restaurar la migración `0022` completa y aplicar `0023` + `0025` (RLS, índice y RPC transaccional)
+- [x] Duplicar contratos con todo su contenido mediante RPC `duplicar_contrato` (migración `0026`)
+- [x] Separar contratos en ejecución (`/contratos`) e historial (`/historial`) según `estado_ejecucion`
+- [x] Crear migración `0027_seguimiento_ipc.sql` y aplicarla en Supabase (tablas, constraints, RLS y triggers)
+- [x] Agregar índices de `created_by` para las tablas IPC (migración `0028`)
+- [x] Implementar Seguimiento IPC (`/ipc`): formulario, CRUD, resumen, filtros, tabla con comparativo y tab de gráficas/análisis
+- [x] Implementar IPC Nacional (`/configuracion/ipc-nacional`): CRUD del histórico por país y año
+- [ ] Verificación manual de CRUD y roles
+
+## Phase 4: Enhancements
 - [ ] Implement row-level actions (edit/delete) in table
 - [ ] Add keyboard shortcuts (Ctrl+N for create focus)
 - [ ] Create dashboard overview/stats section

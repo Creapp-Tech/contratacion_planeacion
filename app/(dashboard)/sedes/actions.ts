@@ -9,6 +9,7 @@ import {
   usuarioEditor,
 } from "@/lib/auth/session"
 import { alcanceTotal } from "@/lib/constants/roles"
+import { departamentoOficial, normalizarTexto } from "@/lib/sedes/departamentos"
 import {
   mapearFila,
   normalizarNombre,
@@ -259,6 +260,20 @@ export async function importarSedes(
 
   if (error) return { error: error.message }
 
+  const { data: regionalesCatalogo, error: errorCatalogo } = await admin
+    .from("catalogos_opciones")
+    .select("nombre")
+    .eq("dominio", "regional")
+    .eq("activo", true)
+
+  if (errorCatalogo) return { error: errorCatalogo.message }
+
+  const regionalesOficiales = new Map(
+    ((regionalesCatalogo ?? []) as { nombre: string }[]).map(
+      (fila): [string, string] => [normalizarTexto(fila.nombre), fila.nombre]
+    )
+  )
+
   const mapa = new Map(
     ((existentes ?? []) as { id: string; nombre: string }[]).map((sede) => [
       normalizarNombre(sede.nombre),
@@ -279,6 +294,30 @@ export async function importarSedes(
     if (!sede.nombre) {
       resultado.omitidas.push({ fila: numeroFila, motivo: "Falta el nombre" })
       continue
+    }
+
+    if (sede.departamento?.trim()) {
+      const oficial = departamentoOficial(sede.departamento)
+      if (!oficial) {
+        resultado.omitidas.push({
+          fila: numeroFila,
+          motivo: `Departamento no oficial: "${sede.departamento}"`,
+        })
+        continue
+      }
+      sede.departamento = oficial
+    }
+
+    if (sede.regional?.trim()) {
+      const oficial = regionalesOficiales.get(normalizarTexto(sede.regional))
+      if (!oficial) {
+        resultado.omitidas.push({
+          fila: numeroFila,
+          motivo: `Regional fuera de catálogo: "${sede.regional}"`,
+        })
+        continue
+      }
+      sede.regional = oficial
     }
 
     const payload = { ...sede, pais: sede.pais ?? "Colombia" }

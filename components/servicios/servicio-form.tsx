@@ -29,14 +29,28 @@ import {
 } from "@/components/ui/select"
 import type { Area } from "@/lib/areas/queries"
 import type { CatalogoItem } from "@/lib/catalogos/queries"
-import type { Servicio } from "@/lib/servicios/queries"
+import type { GrupoServicio, Servicio } from "@/lib/servicios/queries"
 
 const SIN_VALOR = "__sin_valor__"
 
 const formSchema = z.object({
   nombre: z.string().min(1, "Ingresa el nombre del servicio"),
-  grupo: z.string(),
+  grupo_id: z.string(),
   area_id: z.string(),
+  duracion_minutos: z
+    .string()
+    .refine(
+      (valor) => valor.trim() === "" || /^\d+$/.test(valor.trim()),
+      "Ingresa un número entero"
+    )
+    .refine(
+      (valor) => {
+        if (valor.trim() === "") return true
+        const n = Number(valor)
+        return n >= 1 && n <= 1440
+      },
+      "La duración debe estar entre 1 y 1440 minutos"
+    ),
   tipo_personal: z.string().min(1, "Selecciona el tipo de personal"),
 })
 
@@ -46,6 +60,7 @@ type ServicioFormProps = {
   mode: "crear" | "editar"
   servicio?: Servicio
   areas: Area[]
+  grupos: GrupoServicio[]
   tiposPersonal: CatalogoItem[]
 }
 
@@ -59,6 +74,13 @@ function toAreaItems(areas: Area[]) {
   ])
 }
 
+function toGrupoItems(grupos: GrupoServicio[]) {
+  return Object.fromEntries([
+    [SIN_VALOR, "Sin grupo"],
+    ...grupos.map((grupo) => [grupo.id, grupo.nombre]),
+  ])
+}
+
 function toTipoPersonalItems(tipos: CatalogoItem[]) {
   return Object.fromEntries([
     ...tipos.map((tipo) => [tipo.nombre, tipo.nombre]),
@@ -69,6 +91,7 @@ export function ServicioForm({
   mode,
   servicio,
   areas,
+  grupos,
   tiposPersonal,
 }: ServicioFormProps) {
   const router = useRouter()
@@ -83,8 +106,12 @@ export function ServicioForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: servicio?.nombre ?? "",
-      grupo: servicio?.grupo ?? "",
+      grupo_id: servicio?.grupo_id ?? "",
       area_id: servicio?.area_id ?? "",
+      duracion_minutos:
+        servicio?.duracion_minutos != null
+          ? String(servicio.duracion_minutos)
+          : "",
       tipo_personal: servicio?.tipo_personal ?? "",
     },
   })
@@ -94,8 +121,12 @@ export function ServicioForm({
 
     const payload = {
       nombre: values.nombre,
-      grupo: values.grupo || null,
+      grupo_id: values.grupo_id === SIN_VALOR ? null : values.grupo_id || null,
       area_id: values.area_id === SIN_VALOR ? null : values.area_id || null,
+      duracion_minutos:
+        values.duracion_minutos.trim() === ""
+          ? null
+          : Number(values.duracion_minutos),
       tipo_personal: values.tipo_personal,
     }
 
@@ -134,12 +165,51 @@ export function ServicioForm({
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="grupo">Grupo</FieldLabel>
-          <Input
-            id="grupo"
-            autoComplete="off"
-            {...register("grupo")}
+          <FieldLabel htmlFor="grupo_id">Grupo</FieldLabel>
+          <Controller
+            control={control}
+            name="grupo_id"
+            render={({ field }) => (
+              <Select
+                value={field.value || SIN_VALOR}
+                onValueChange={(value) =>
+                  field.onChange(value === SIN_VALOR ? "" : value)
+                }
+                items={toGrupoItems(grupos)}
+              >
+                <SelectTrigger id="grupo_id" className="w-full">
+                  <SelectValue placeholder="Selecciona el grupo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_VALOR}>Sin grupo</SelectItem>
+                  {grupos.map((grupo) => (
+                    <SelectItem key={grupo.id} value={grupo.id}>
+                      {grupo.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           />
+        </Field>
+
+        <Field data-invalid={!!errors.duracion_minutos}>
+          <FieldLabel htmlFor="duracion_minutos">
+            Duración (minutos)
+          </FieldLabel>
+          <Input
+            id="duracion_minutos"
+            type="number"
+            min={1}
+            max={1440}
+            step={1}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="Opcional"
+            aria-invalid={!!errors.duracion_minutos}
+            {...register("duracion_minutos")}
+          />
+          <FieldError errors={[errors.duracion_minutos]} />
         </Field>
 
         <Field>

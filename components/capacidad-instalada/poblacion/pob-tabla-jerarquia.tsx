@@ -32,11 +32,13 @@ function Filas({
   abiertos,
   onAlternar,
   profundidad,
+  mostrarActual,
 }: {
   nodos: NodoArbol[]
   abiertos: Set<string>
   onAlternar: (id: string) => void
   profundidad: number
+  mostrarActual: boolean
 }) {
   return (
     <>
@@ -67,8 +69,13 @@ function Filas({
                 {nodo.etiqueta}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {formatoNumero(nodo.capacidad)}
+                {formatoNumero(nodo.capacidadInicial)}
               </TableCell>
+              {mostrarActual ? (
+                <TableCell className="text-right tabular-nums">
+                  {formatoNumero(nodo.capacidad)}
+                </TableCell>
+              ) : null}
               <TableCell className="text-right tabular-nums">
                 {formatoNumero(nodo.poblacion)}
               </TableCell>
@@ -97,6 +104,7 @@ function Filas({
                 abiertos={abiertos}
                 onAlternar={onAlternar}
                 profundidad={profundidad + 1}
+                mostrarActual={mostrarActual}
               />
             ) : null}
           </Fragment>
@@ -122,6 +130,7 @@ export function PobTablaJerarquia({
   const [abiertos, setAbiertos] = useState<Set<string>>(
     () => new Set(idsDelArbol(nodos))
   )
+  const mostrarActual = etiquetaCapacidad !== "Inicial"
 
   function alternar(id: string) {
     setAbiertos((actual) => {
@@ -161,9 +170,10 @@ export function PobTablaJerarquia({
           <TableHeader>
             <TableRow>
               <TableHead>{primeraColumna}</TableHead>
-              <TableHead className="text-right">
-                Capacidad {etiquetaCapacidad}
-              </TableHead>
+              <TableHead className="text-right">Capacidad Inicial</TableHead>
+              {mostrarActual ? (
+                <TableHead className="text-right">Capacidad Actual</TableHead>
+              ) : null}
               <TableHead className="text-right">
                 Población {etiquetaPoblacion}
               </TableHead>
@@ -175,7 +185,7 @@ export function PobTablaJerarquia({
             {nodos.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={mostrarActual ? 6 : 5}
                   className="py-12 text-center text-muted-foreground"
                 >
                   Sin resultados para los filtros seleccionados.
@@ -187,6 +197,7 @@ export function PobTablaJerarquia({
                 abiertos={abiertos}
                 onAlternar={alternar}
                 profundidad={0}
+                mostrarActual={mostrarActual}
               />
             )}
           </TableBody>

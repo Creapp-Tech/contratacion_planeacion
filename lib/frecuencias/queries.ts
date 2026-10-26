@@ -6,6 +6,7 @@ export type FrecuenciaServicio = {
   servicio_id: string
   servicio_nombre: string
   servicio_grupo: string | null
+  servicio_duracion_minutos: number | null
   frecuencia: number
   area_id: string | null
   area_nombre: string | null
@@ -27,6 +28,7 @@ export type Frecuencia = {
   asegurador_nombre: string
   version: string
   activo: boolean
+  usar_en_calculo: boolean
   created_at: string
   servicios: FrecuenciaServicio[]
 }
@@ -40,6 +42,7 @@ type FrecuenciaAnidada = {
   asegurador_eps_id: string
   version: string
   activo: boolean
+  usar_en_calculo: boolean
   created_at: string
   sedes: { nombre: string; regional: string | null; zonal: string | null } | null
   regimenes: { nombre: string } | null
@@ -54,14 +57,17 @@ type FrecuenciaServicioAnidada = {
   servicios: {
     nombre: string
     grupo: string | null
+    grupo_id: string | null
+    duracion_minutos: number | null
     area_id: string | null
     tipo_personal: string
+    grupos_servicio: { nombre: string } | null
     areas_catalogo: { nombre: string; categoria: string } | null
   } | null
 }
 
 const CAMPOS_BASE =
-  "id, tipo_frecuencia, nombre_nota_tecnica, sede_id, regimen_id, asegurador_eps_id, version, activo, created_at"
+  "id, tipo_frecuencia, nombre_nota_tecnica, sede_id, regimen_id, asegurador_eps_id, version, activo, usar_en_calculo, created_at"
 
 function selectEncabezado(sedeInterior = false) {
   return `${CAMPOS_BASE}, sedes${sedeInterior ? "!inner" : ""}(nombre, regional, zonal), regimenes(nombre), aseguradores_eps(nombre_eps)`
@@ -85,6 +91,7 @@ function mapearFrecuencia(
     asegurador_nombre: fila.aseguradores_eps?.nombre_eps ?? "—",
     version: fila.version,
     activo: fila.activo,
+    usar_en_calculo: fila.usar_en_calculo,
     created_at: fila.created_at,
     servicios,
   }
@@ -96,7 +103,9 @@ function mapearServicio(fila: FrecuenciaServicioAnidada): FrecuenciaServicio {
     frecuencia_id: fila.frecuencia_id,
     servicio_id: fila.servicio_id,
     servicio_nombre: fila.servicios?.nombre ?? "—",
-    servicio_grupo: fila.servicios?.grupo ?? null,
+    servicio_grupo:
+      fila.servicios?.grupos_servicio?.nombre ?? null,
+    servicio_duracion_minutos: fila.servicios?.duracion_minutos ?? null,
     frecuencia: fila.frecuencia,
     area_id: fila.servicios?.area_id ?? null,
     area_nombre: fila.servicios?.areas_catalogo?.nombre ?? null,
@@ -114,6 +123,7 @@ export type FrecuenciaFiltros = {
   asegurador_eps_id?: string
   departamento?: string
   municipio?: string
+  en_calculo?: "si" | "no"
 }
 
 export async function listFrecuencias(
@@ -148,6 +158,12 @@ export async function listFrecuencias(
     query = query.eq("asegurador_eps_id", filtros.asegurador_eps_id)
   }
 
+  if (filtros.en_calculo === "si") {
+    query = query.eq("usar_en_calculo", true)
+  } else if (filtros.en_calculo === "no") {
+    query = query.eq("usar_en_calculo", false)
+  }
+
   const { data, error } = await query
 
   if (error) throw error
@@ -171,7 +187,7 @@ export async function getFrecuencia(id: string): Promise<Frecuencia | null> {
 
   const { data: servicios, error: serviciosError } = await supabase
     .from("frecuencias_servicios")
-    .select("id, frecuencia_id, servicio_id, frecuencia, servicios(nombre, grupo, area_id, tipo_personal, areas_catalogo(nombre, categoria))")
+    .select("id, frecuencia_id, servicio_id, frecuencia, servicios(nombre, duracion_minutos, area_id, tipo_personal, grupos_servicio(nombre), areas_catalogo(nombre, categoria))")
     .eq("frecuencia_id", id)
     .order("created_at", { ascending: true })
 
@@ -183,6 +199,50 @@ export async function getFrecuencia(id: string): Promise<Frecuencia | null> {
       mapearServicio
     )
   )
+}
+
+export type FrecuenciaEnCalculo = {
+  id: string
+  nombre_nota_tecnica: string
+  version: string
+  tipo_frecuencia: string
+  sede_nombre: string
+}
+
+export async function getFrecuenciaEnCalculo(
+  sedeId: string,
+  tipoFrecuencia: string,
+  exceptoId?: string
+): Promise<FrecuenciaEnCalculo | null> {
+  let query = createAdminClient()
+    .from("frecuencias")
+    .select("id, nombre_nota_tecnica, version, tipo_frecuencia, sedes(nombre)")
+    .eq("sede_id", sedeId)
+    .eq("tipo_frecuencia", tipoFrecuencia)
+    .eq("usar_en_calculo", true)
+
+  if (exceptoId) query = query.neq("id", exceptoId)
+
+  const { data, error } = await query.maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+
+  const fila = data as unknown as {
+    id: string
+    nombre_nota_tecnica: string
+    version: string
+    tipo_frecuencia: string
+    sedes: { nombre: string } | null
+  }
+
+  return {
+    id: fila.id,
+    nombre_nota_tecnica: fila.nombre_nota_tecnica,
+    version: fila.version,
+    tipo_frecuencia: fila.tipo_frecuencia,
+    sede_nombre: fila.sedes?.nombre ?? "—",
+  }
 }
 
 export type OpcionesFiltrosFrecuencias = {
@@ -239,7 +299,7 @@ export async function listOpcionesFiltrosFrecuencias(): Promise<OpcionesFiltrosF
     aseguradores: (
       (aseguradores.data ?? []) as { id: string; nombre_eps: string }[]
     ).map((fila) => ({ id: fila.id, nombre: fila.nombre_eps })),
-    departamentos: [ ...new Set(sedesData.map((sede) => sede.departamento).filter(Boolean)) ].sort((a, b) => a.localeCompare(b)),
-    municipios: [ ...new Set(sedesData.map((sede) => sede.municipio).filter(Boolean)) ].sort((a, b) => a.localeCompare(b)),
+    departamentos: [ ...new Set(sedesData.map((sede) => sede.departamento).filter((d): d is string => Boolean(d))) ].sort((a, b) => a.localeCompare(b)),
+    municipios: [ ...new Set(sedesData.map((sede) => sede.municipio).filter((m): m is string => Boolean(m))) ].sort((a, b) => a.localeCompare(b)),
   }
 }

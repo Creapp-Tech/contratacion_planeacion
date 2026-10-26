@@ -33,6 +33,7 @@ export type ServicioImportado = {
   grupo: string | null
   area: string | null
   tipo_personal: string | null
+  duracion_minutos: string | null
 }
 
 export const ALIAS_COLUMNAS: Record<string, keyof ServicioImportado> = {
@@ -52,6 +53,10 @@ export const ALIAS_COLUMNAS: Record<string, keyof ServicioImportado> = {
   tipo_persona: "tipo_personal",
   tipo_de_persona: "tipo_personal",
   personal: "tipo_personal",
+  duracion: "duracion_minutos",
+  duracion_minutos: "duracion_minutos",
+  duracion_en_minutos: "duracion_minutos",
+  minutos: "duracion_minutos",
 }
 
 export function normalizarEncabezado(value: string) {
@@ -159,6 +164,7 @@ export function mapearFila(fila: FilaImportacion): ServicioImportado {
     grupo: texto(resultado.grupo),
     area: texto(resultado.area),
     tipo_personal: texto(resultado.tipo_personal),
+    duracion_minutos: texto(resultado.duracion_minutos),
   }
 }
 

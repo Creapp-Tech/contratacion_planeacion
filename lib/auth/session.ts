@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 
 import {
   alcanceTotal,
+  puedeAccederContratacion,
   puedeAccederPlaneacion,
   puedeEditarPlaneacion,
 } from "@/lib/constants/roles"
@@ -18,7 +19,35 @@ export type CurrentUsuario = {
   regional_id: string | null
 }
 
-export async function getCurrentUsuario(): Promise<CurrentUsuario | null> {
+/**
+ * Error de perfil: la sesión es válida (el usuario existe en auth), pero su
+ * registro en `public.usuarios` falta o es inválido. NUNCA debe provocar un
+ * signOut: la sesión sigue siendo válida y sólo falla la lectura de datos.
+ */
+export class PerfilError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "PerfilError"
+  }
+}
+
+export type PerfilStatus = "ok" | "sin_sesion" | "sin_perfil" | "inactivo"
+
+export type GetCurrentUsuarioResult = {
+  usuario: CurrentUsuario | null
+  status: PerfilStatus
+}
+
+/**
+ * Lee el usuario autenticado y su perfil.
+ *
+ * Reglas clave:
+ * - Si no hay usuario en auth => `sin_sesion` (el middleware/guard redirige a /login).
+ * - Si hay usuario en auth pero falla la lectura del perfil (registro faltante,
+ *   error de red/RLS) => `sin_perfil` o `inactivo`, PERO la sesión se conserva.
+ *   No se llama a signOut ni se fuerza logout por un error de datos.
+ */
+export async function getCurrentUsuarioResult(): Promise<GetCurrentUsuarioResult> {
   await io()
 
   const supabase = await createClient()
@@ -28,22 +57,56 @@ export async function getCurrentUsuario(): Promise<CurrentUsuario | null> {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return null
+    return { usuario: null, status: "sin_sesion" }
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("usuarios")
     .select("id, email, nombre_completo, rol, estado, regional_id")
     .eq("id", user.id)
     .maybeSingle()
 
-  return data ?? null
+  if (error) {
+    // Error de datos (red/RLS): la sesión sigue válida. No cerramos sesión.
+    return { usuario: null, status: "sin_perfil" }
+  }
+
+  if (!data) {
+    return { usuario: null, status: "sin_perfil" }
+  }
+
+  if (data.estado !== "activo") {
+    return { usuario: data, status: "inactivo" }
+  }
+
+  return { usuario: data, status: "ok" }
+}
+
+export async function getCurrentUsuario(): Promise<CurrentUsuario | null> {
+  const { usuario } = await getCurrentUsuarioResult()
+  return usuario
 }
 
 export async function requireSuperadmin(): Promise<CurrentUsuario> {
-  const usuario = await getCurrentUsuario()
+  const { usuario, status } = await getCurrentUsuarioResult()
 
-  if (!usuario || usuario.rol !== "superadmin" || usuario.estado !== "activo") {
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (usuario.rol !== "superadmin") {
     redirect("/")
   }
 
@@ -57,17 +120,69 @@ export type AlcanceUsuario = {
 }
 
 export async function requireAccesoPlaneacion(): Promise<CurrentUsuario> {
-  const usuario = await getCurrentUsuario()
+  const { usuario, status } = await getCurrentUsuarioResult()
 
-  if (
-    !usuario ||
-    usuario.estado !== "activo" ||
-    !puedeAccederPlaneacion(usuario.rol)
-  ) {
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeAccederPlaneacion(usuario.rol)) {
     redirect("/")
   }
 
   return usuario
+}
+
+export async function requireAccesoContratacion(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeAccederContratacion(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+export type AlcanceContratos = {
+  usuario: CurrentUsuario
+  verTodo: boolean
+  regionalId: string | null
+}
+
+export function alcanceContratos(usuario: CurrentUsuario): AlcanceContratos {
+  if (alcanceTotal(usuario.rol)) {
+    return { usuario, verTodo: true, regionalId: null }
+  }
+
+  return { usuario, verTodo: false, regionalId: usuario.regional_id }
 }
 
 export async function alcanceDelUsuario(
@@ -100,13 +215,25 @@ export async function requireAlcancePlaneacion(): Promise<AlcanceUsuario> {
 }
 
 export async function requireEditorPlaneacion(): Promise<CurrentUsuario> {
-  const usuario = await getCurrentUsuario()
+  const { usuario, status } = await getCurrentUsuarioResult()
 
-  if (
-    !usuario ||
-    usuario.estado !== "activo" ||
-    !puedeEditarPlaneacion(usuario.rol)
-  ) {
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeEditarPlaneacion(usuario.rol)) {
     redirect("/")
   }
 
@@ -114,13 +241,13 @@ export async function requireEditorPlaneacion(): Promise<CurrentUsuario> {
 }
 
 export async function usuarioEditor(): Promise<CurrentUsuario | null> {
-  const usuario = await getCurrentUsuario()
+  const { usuario, status } = await getCurrentUsuarioResult()
 
-  if (
-    !usuario ||
-    usuario.estado !== "activo" ||
-    !puedeEditarPlaneacion(usuario.rol)
-  ) {
+  if (status !== "ok" || !usuario) {
+    return null
+  }
+
+  if (!puedeEditarPlaneacion(usuario.rol)) {
     return null
   }
 

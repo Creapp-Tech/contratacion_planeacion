@@ -87,6 +87,14 @@ export type AreaFila = {
   capacidadEjecucion: number
 }
 
+export type SedeFrecuenciaFila = {
+  sedeId: string
+  sede: string
+  regional: string
+  frecuenciaPlaneacion: string | null
+  frecuenciaEjecucion: string | null
+}
+
 export type ResumenInfra = {
   poblacionActiva: number
   poblacionPagada: number
@@ -94,6 +102,7 @@ export type ResumenInfra = {
   capacidadPlaneacion: number
   capacidadEjecucion: number
   areas: AreaFila[]
+  sedes: SedeFrecuenciaFila[]
 }
 
 export type OpcionesInfra = {
@@ -106,6 +115,7 @@ export type NodoArbol = {
   id: string
   etiqueta: string
   capacidad: number
+  capacidadInicial: number
   poblacion: number
   hijos: NodoArbol[] | null
 }
@@ -263,6 +273,7 @@ export function resumenPoblacion(
 type EntradaJerarquia = {
   ruta: string[]
   capacidad: number
+  capacidadInicial: number
   poblacion: number
 }
 
@@ -292,6 +303,10 @@ export function construirArbol(
         id,
         etiqueta,
         capacidad: grupo.reduce((total, item) => total + item.capacidad, 0),
+        capacidadInicial: grupo.reduce(
+          (total, item) => total + item.capacidadInicial,
+          0
+        ),
         poblacion: grupo.reduce((total, item) => total + item.poblacion, 0),
         hijos: null,
       }
@@ -301,6 +316,10 @@ export function construirArbol(
       id,
       etiqueta,
       capacidad: hijos.reduce((total, hijo) => total + hijo.capacidad, 0),
+      capacidadInicial: hijos.reduce(
+        (total, hijo) => total + hijo.capacidadInicial,
+        0
+      ),
       poblacion: hijos.reduce((total, hijo) => total + hijo.poblacion, 0),
       hijos,
     }
@@ -326,6 +345,7 @@ export function entradasPorSede(
     .map((sede) => ({
       ruta: ["Colombia", sede.regional, sede.sede],
       capacidad: capacidadDe(sede, capacidad) ?? 0,
+      capacidadInicial: sede.capacidadInicial ?? 0,
       poblacion: poblacionDe(sede, poblacion),
     }))
 }
@@ -350,9 +370,9 @@ function calcularCapacidadDesdeFreqPop(
 ): number {
   const horas = (freqPop * 20) / 60
   if (esEnfermeriaArea) {
-    return (60 / 20) * (horas / 540)
+    return Math.round(((60 / 20) * (horas / 540)) * 100) / 100
   }
-  return horas / 135 / 2
+  return Math.round((horas / 135 / 2) * 100) / 100
 }
 
 export function resumenInfraestructura(
@@ -503,6 +523,32 @@ export function resumenInfraestructura(
     capacidadEjecucion += area.capacidadEjecucion
   }
 
+  const frecuenciasPorSedeTipo = new Map<string, string[]>()
+  for (const freq of frecuencias) {
+    if (!sedeIds.has(freq.sedeId)) continue
+    const clave = `${freq.sedeId}|${freq.tipoFrecuencia}`
+    const etiqueta = `${freq.nombreNotaTecnica} (v${freq.version})`
+    const lista = frecuenciasPorSedeTipo.get(clave) ?? []
+    if (!lista.includes(etiqueta)) lista.push(etiqueta)
+    frecuenciasPorSedeTipo.set(clave, lista)
+  }
+
+  const sedesResumen: SedeFrecuenciaFila[] = filtradas.map((sede) => {
+    const planeacion = frecuenciasPorSedeTipo.get(
+      `${sede.id}|nota_tecnica_viva`
+    )
+    const ejecucion = frecuenciasPorSedeTipo.get(
+      `${sede.id}|ejecucion_servicios`
+    )
+    return {
+      sedeId: sede.id,
+      sede: sede.nombre,
+      regional: (sede.regional ?? "").trim() || "Sin regional",
+      frecuenciaPlaneacion: planeacion?.join(", ") ?? null,
+      frecuenciaEjecucion: ejecucion?.join(", ") ?? null,
+    }
+  })
+
   return {
     poblacionActiva,
     poblacionPagada,
@@ -512,6 +558,7 @@ export function resumenInfraestructura(
     areas: [...areas.values()].sort((a, b) =>
       compararAreasCapacidad(a.area, b.area)
     ),
+    sedes: sedesResumen,
   }
 }
 

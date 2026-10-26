@@ -51,6 +51,8 @@ export function InfraTarjetas({
 }) {
   const difPlaneacion = resumen.capacidadActual - resumen.capacidadPlaneacion
   const difEjecucion = resumen.capacidadActual - resumen.capacidadEjecucion
+  const hayPlaneacion = resumen.sedes.some((sede) => sede.frecuenciaPlaneacion)
+  const hayEjecucion = resumen.sedes.some((sede) => sede.frecuenciaEjecucion)
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -71,25 +73,65 @@ export function InfraTarjetas({
       />
       <Tarjeta
         titulo="Capacidad por Planeación"
-        valor={formatoNumero(resumen.capacidadPlaneacion)}
-        detalle="Según frecuencia de nota técnica"
+        valor={
+          hayPlaneacion
+            ? formatoNumero(resumen.capacidadPlaneacion)
+            : "Sin frecuencia"
+        }
+        detalle={
+          hayPlaneacion
+            ? "Según frecuencia de nota técnica"
+            : "No hay nota técnica marcada para el cálculo"
+        }
       />
       <Tarjeta
         titulo="Capacidad por Ejecución"
-        valor={formatoNumero(resumen.capacidadEjecucion)}
-        detalle="Según frecuencia de ejecución de servicios"
+        valor={
+          hayEjecucion
+            ? formatoNumero(resumen.capacidadEjecucion)
+            : "Sin frecuencia"
+        }
+        detalle={
+          hayEjecucion
+            ? "Según frecuencia de ejecución de servicios"
+            : "No hay ejecución de servicios marcada para el cálculo"
+        }
       />
       <Tarjeta
         titulo="Diferencia (Actual − Planeación)"
-        valor={formatoNumero(difPlaneacion)}
-        detalle="Capacidad actual menos planeada"
-        acento={difPlaneacion < 0 ? "negativo" : difPlaneacion > 0 ? "positivo" : undefined}
+        valor={hayPlaneacion ? formatoNumero(difPlaneacion) : "Sin frecuencia"}
+        detalle={
+          hayPlaneacion
+            ? "Capacidad actual menos planeada"
+            : "No hay nota técnica marcada para el cálculo"
+        }
+        acento={
+          hayPlaneacion
+            ? difPlaneacion < 0
+              ? "negativo"
+              : difPlaneacion > 0
+                ? "positivo"
+                : undefined
+            : undefined
+        }
       />
       <Tarjeta
         titulo="Diferencia (Actual − Ejecución)"
-        valor={formatoNumero(difEjecucion)}
-        detalle="Capacidad actual menos ejecutada"
-        acento={difEjecucion < 0 ? "negativo" : difEjecucion > 0 ? "positivo" : undefined}
+        valor={hayEjecucion ? formatoNumero(difEjecucion) : "Sin frecuencia"}
+        detalle={
+          hayEjecucion
+            ? "Capacidad actual menos ejecutada"
+            : "No hay ejecución de servicios marcada para el cálculo"
+        }
+        acento={
+          hayEjecucion
+            ? difEjecucion < 0
+              ? "negativo"
+              : difEjecucion > 0
+                ? "positivo"
+                : undefined
+            : undefined
+        }
       />
       {personalizada != null ? (
         <Tarjeta

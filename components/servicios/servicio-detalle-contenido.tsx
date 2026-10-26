@@ -32,7 +32,15 @@ export async function ServicioDetalleContenido({
       </div>
       <div className="flex flex-col gap-1">
         <dt className="text-sm font-medium text-muted-foreground">Grupo</dt>
-        <dd className="text-base">{servicio.grupo ?? "—"}</dd>
+        <dd className="text-base">
+          {servicio.grupo_nombre ?? "—"}
+        </dd>
+      </div>
+      <div className="flex flex-col gap-1">
+        <dt className="text-sm font-medium text-muted-foreground">
+          Duración (minutos)
+        </dt>
+        <dd className="text-base">{servicio.duracion_minutos ?? "—"}</dd>
       </div>
       <div className="flex flex-col gap-1">
         <dt className="text-sm font-medium text-muted-foreground">

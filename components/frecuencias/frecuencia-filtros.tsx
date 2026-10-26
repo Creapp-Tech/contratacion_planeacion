@@ -18,6 +18,7 @@ import type {
   FrecuenciaFiltros,
   OpcionesFiltrosFrecuencias,
 } from "@/lib/frecuencias/queries"
+import { TIPOS_FRECUENCIA } from "@/lib/frecuencias/tipos"
 import { listMunicipiosByDepartamento } from "@/lib/sedes/queries"
 
 const ALL = "__all__"
@@ -90,8 +91,11 @@ export function FrecuenciaFiltros({
     label: string
   }[]>([])
 
-  const { q, tipo_frecuencia, sede_id, regional, regimen_id, asegurador_eps_id } =
+  const [q, setQ] = useState(filtros.q ?? "")
+
+  const { tipo_frecuencia, sede_id, regional, regimen_id, asegurador_eps_id } =
     filtros
+  const { en_calculo } = filtros
 
   useEffect(() => {
     async function cargarMunicipios() {
@@ -113,6 +117,11 @@ export function FrecuenciaFiltros({
     cargarMunicipios()
   }, [departamento])
 
+  const departamentoOptions = opciones.departamentos.map((d) => ({
+    value: d,
+    label: d,
+  }))
+
   const tipoSelect = {
     items: Object.fromEntries([
       [ALL, "Todos los tipos"],
@@ -121,6 +130,19 @@ export function FrecuenciaFiltros({
     options: [
       { value: ALL, label: "Todos los tipos" },
       ...TIPOS_FRECUENCIA.map((item) => ({ value: item.value, label: item.label })),
+    ],
+  }
+
+  const calculoSelect = {
+    items: {
+      [ALL]: "Todos",
+      si: "En uso para cálculo",
+      no: "Sin usar en cálculo",
+    },
+    options: [
+      { value: ALL, label: "Todos" },
+      { value: "si", label: "En uso para cálculo" },
+      { value: "no", label: "Sin usar en cálculo" },
     ],
   }
 
@@ -190,7 +212,8 @@ export function FrecuenciaFiltros({
       regimen_id ||
       asegurador_eps_id ||
       departamento ||
-      municipio
+      municipio ||
+      en_calculo
   )
 
   return (
@@ -222,6 +245,15 @@ export function FrecuenciaFiltros({
       />
 
       <FiltroSelect
+        id="filtro-calculo"
+        value={en_calculo}
+        placeholder="Cálculo"
+        items={calculoSelect.items}
+        options={calculoSelect.options}
+        onChange={(value) => updateParams({ en_calculo: value })}
+      />
+
+      <FiltroSelect
         id="filtro-regional"
         value={regional}
         placeholder="Regional"
@@ -250,7 +282,7 @@ export function FrecuenciaFiltros({
         }
         placeholder="Municipio"
         items={toItems("Todos los municipios", municipioOptions.map((o) => o.value))}
-        options={municipioOptions.length > 0 ? municipioOptions : opciones.departamentos.map((d) => ({ value: d, label: d }))}
+        options={municipioOptions.length > 0 ? municipioOptions : opciones.municipios.map((d) => ({ value: d, label: d }))}
         onChange={(value) => setMunicipio(value)}
       />
 

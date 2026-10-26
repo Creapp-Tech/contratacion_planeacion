@@ -61,10 +61,28 @@ export type SedeDetalle = SedeRow & {
 
 export type SedeFiltros = {
   q?: string
-  departamento?: string
+  /** Restricción de acceso por regional (no es filtro de UI). */
   regional?: string
+  departamento?: string
+  municipio?: string
+  asegurador?: string
   marca?: string
-  estado?: string
+}
+
+export type OpcionesFiltros = {
+  regionales: string[]
+  departamentos: string[]
+  municipios: string[]
+  aseguradores: string[]
+  marcas: string[]
+}
+
+export const OPCIONES_FILTROS_VACIAS: OpcionesFiltros = {
+  regionales: [],
+  departamentos: [],
+  municipios: [],
+  aseguradores: [],
+  marcas: [],
 }
 
 export type AreaCatalogo = {
@@ -90,12 +108,6 @@ export type OpcionesCatalogo = {
   marca: string[]
   nivel: string[]
   tipo_ips: TipoIpsOpcion[]
-}
-
-export type OpcionesFiltros = {
-  departamentos: string[]
-  regionales: string[]
-  marcas: string[]
 }
 
 export type ResumenSedes = {
@@ -150,30 +162,137 @@ function mapearFila(sede: SedeConAreas): SedeListaFila {
 export async function listSedes(
   filtros: SedeFiltros = {}
 ): Promise<SedeListaFila[]> {
-  let query = createAdminClient()
-    .from("sedes")
-    .select("*, sedes_areas(cantidad, cantidad_habilitada, areas_catalogo(categoria, mide_capacidad_ocupacion))")
+  try {
+    const admin = createAdminClient()
 
-  if (filtros.q) {
-    query = query.ilike("nombre", `%${filtros.q}%`)
+    let srf = admin
+      .from("sedes_relacion_filtros")
+      .select("sede_id, departamento, municipio, regional_id")
+      .eq("activo", true)
+
+    if (filtros.departamento) {
+      srf = srf.eq("departamento", filtros.departamento)
+    }
+    if (filtros.municipio) {
+      srf = srf.eq("municipio", filtros.municipio)
+    }
+
+    // Restricción de acceso por regional → resolver nombre a id del catálogo.
+    if (filtros.regional) {
+      const { data: catalogo, error: errorCatalogo } = await admin
+        .from("catalogos_opciones")
+        .select("id")
+        .eq("dominio", "regional")
+        .ilike("nombre", filtros.regional)
+        .maybeSingle()
+
+      if (errorCatalogo) {
+        console.warn("[sedes] listSedes: error al resolver regional:", errorCatalogo.message)
+        return []
+      }
+      if (!catalogo) return []
+
+      srf = srf.eq("regional_id", catalogo.id)
+    }
+
+    const { data: relaciones, error: errorRelaciones } = await srf
+    if (errorRelaciones) {
+      console.warn("[sedes] listSedes: error al leer sedes_relacion_filtros:", errorRelaciones.message)
+      return []
+    }
+
+    const ids = (relaciones ?? []).map(
+      (relacion) => relacion.sede_id as string
+    )
+    if (ids.length === 0) return []
+
+    let query = admin
+      .from("sedes")
+      .select("*, sedes_areas(cantidad, cantidad_habilitada, areas_catalogo(categoria, mide_capacidad_ocupacion))")
+      .in("id", ids)
+      .or("estado.neq.inactiva,estado.is.null")
+
+    if (filtros.q) {
+      query = query.ilike("nombre", `%${filtros.q}%`)
+    }
+    if (filtros.marca) {
+      query = query.eq("marca", filtros.marca)
+    }
+
+    // Asegurador: EXISTS vía tabla puente (evita duplicados de la sede).
+    if (filtros.asegurador) {
+      const { data: asegurador, error: errorAsegurador } = await admin
+        .from("aseguradores_eps")
+        .select("id")
+        .ilike("nombre_eps", filtros.asegurador)
+        .maybeSingle()
+
+      if (errorAsegurador) {
+        console.warn("[sedes] listSedes: error al buscar asegurador:", errorAsegurador.message)
+        return []
+      }
+      if (!asegurador) return []
+
+      const { data: puente, error: errorPuente } = await admin
+        .from("sedes_aseguradores")
+        .select("sede_id")
+        .eq("asegurador_eps_id", asegurador.id)
+        .in("sede_id", ids)
+
+      if (errorPuente) {
+        console.warn("[sedes] listSedes: error al leer sedes_aseguradores:", errorPuente.message)
+        return []
+      }
+
+      const idsAsegurador = new Set(
+        (puente ?? []).map((fila) => fila.sede_id as string)
+      )
+      if (idsAsegurador.size === 0) return []
+
+      query = query.in("id", [...idsAsegurador])
+    }
+
+    const { data, error } = await query.order("nombre", { ascending: true })
+
+    if (error) {
+      console.warn("[sedes] listSedes: error al leer sedes:", error.message)
+      return []
+    }
+    return ((data ?? []) as SedeConAreas[]).map(mapearFila)
+  } catch (error) {
+    console.warn("[sedes] listSedes: error inesperado:", error)
+    return []
   }
-  if (filtros.departamento) {
-    query = query.eq("departamento", filtros.departamento)
-  }
-  if (filtros.regional) {
-    query = query.ilike("regional", filtros.regional)
-  }
-  if (filtros.marca) {
-    query = query.eq("marca", filtros.marca)
-  }
-  if (filtros.estado) {
-    query = query.eq("estado", filtros.estado)
+}
+
+/**
+ * Opciones de cada filtro en cascada, calculadas con el RPC
+ * `obtener_opciones_filtros` (lógica facetada: cada filtro aplica los otros 4).
+ */
+export async function listOpcionesFiltros(
+  filtros: SedeFiltros = {}
+): Promise<OpcionesFiltros> {
+  const { data, error } = await createAdminClient().rpc("obtener_opciones_filtros", {
+    p_regional: filtros.regional ?? null,
+    p_departamento: filtros.departamento ?? null,
+    p_municipio: filtros.municipio ?? null,
+    p_asegurador: filtros.asegurador ?? null,
+    p_marca: filtros.marca ?? null,
+  })
+
+  if (error) {
+    console.error("[sedes] obtener_opciones_filtros falló:", error)
+    return OPCIONES_FILTROS_VACIAS
   }
 
-  const { data, error } = await query.order("nombre", { ascending: true })
-
-  if (error) throw error
-  return ((data ?? []) as SedeConAreas[]).map(mapearFila)
+  const opciones = (data ?? {}) as Partial<OpcionesFiltros>
+  return {
+    regionales: opciones.regionales ?? [],
+    departamentos: opciones.departamentos ?? [],
+    municipios: opciones.municipios ?? [],
+    aseguradores: opciones.aseguradores ?? [],
+    marcas: opciones.marcas ?? [],
+  }
 }
 
 export function resumenSedes(sedes: SedeListaFila[]): ResumenSedes {
@@ -306,31 +425,6 @@ export async function listOpcionesCatalogo(): Promise<OpcionesCatalogo> {
   return opciones
 }
 
-export async function listOpcionesFiltros(): Promise<OpcionesFiltros> {
-  const { data, error } = await createAdminClient()
-    .from("sedes")
-    .select("departamento, regional, marca")
-
-  if (error) throw error
-
-  const filas = (data ?? []) as {
-    departamento: string | null
-    regional: string | null
-    marca: string | null
-  }[]
-
-  const unicos = (valores: (string | null)[]) =>
-    [...new Set(valores.filter((valor): valor is string => !!valor))].sort(
-      (a, b) => a.localeCompare(b)
-    )
-
-  return {
-    departamentos: unicos(filas.map((fila) => fila.departamento)),
-    regionales: unicos(filas.map((fila) => fila.regional)),
-    marcas: unicos(filas.map((fila) => fila.marca)),
-  }
-}
-
 export async function listMunicipiosByDepartamento(
   departamento: string
 ): Promise<string[]> {
@@ -342,35 +436,4 @@ export async function listMunicipiosByDepartamento(
   if (error) throw error
   const valores = (data ?? [] as { municipio: string | null }[]).map((f) => f.municipio).filter(Boolean)
   return [...new Set(valores)].sort((a, b) => a.localeCompare(b))
-}
-
-export async function listSedesByMunicipio(municipio: string): Promise<SedeRow[]> {
-  const { data, error } = await createAdminClient()
-    .from("sedes")
-    .select("*")
-    .eq("municipio", municipio)
-
-  if (error) throw error
-  return data ?? []
-}
-
-export async function listZonalesByRegional(regional: string): Promise<string[]> {
-  const { data, error } = await createAdminClient()
-    .from("sedes")
-    .select("zonal")
-    .eq("regional", regional)
-
-  if (error) throw error
-  const valores = (data ?? [] as { zonal: string | null }[]).map((f) => f.zonal).filter(Boolean)
-  return [...new Set(valores)].sort((a, b) => a.localeCompare(b))
-}
-
-export async function listSedesByZonal(zonal: string): Promise<SedeRow[]> {
-  const { data, error } = await createAdminClient()
-    .from("sedes")
-    .select("*")
-    .eq("zonal", zonal)
-
-  if (error) throw error
-  return data ?? []
 }

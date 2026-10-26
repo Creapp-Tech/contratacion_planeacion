@@ -16,7 +16,11 @@ function TablaSkeleton() {
   return <Skeleton className="h-64 w-full rounded-xl" />
 }
 
-export default function ServiciosPage() {
+export default function ServiciosPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -34,7 +38,7 @@ export default function ServiciosPage() {
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>
-        <ServiciosContenido />
+        <ServiciosContenido searchParams={searchParams} />
       </Suspense>
     </div>
   )

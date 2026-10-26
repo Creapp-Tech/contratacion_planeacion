@@ -2,6 +2,7 @@ import {
   Activity,
   BarChart3,
   BellRing,
+  Boxes,
   Building2,
   Calculator,
   ClipboardList,
@@ -9,7 +10,11 @@ import {
   FileSignature,
   FileSpreadsheet,
   FileText,
+  FolderKanban,
+  FolderTree,
   Gauge,
+  Globe,
+  History,
   Layers,
   LayoutGrid,
   ListChecks,
@@ -19,12 +24,17 @@ import {
   ShieldCheck,
   Stethoscope,
   Tag,
+  TrendingUp,
   UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react"
 
-import { ROLES_PLANEACION, type Rol } from "@/lib/constants/roles"
+import {
+  ROLES_CONTRATACION,
+  ROLES_PLANEACION,
+  type Rol,
+} from "@/lib/constants/roles"
 
 export interface NavItem {
   title: string
@@ -77,6 +87,29 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Contratación",
+    items: [
+      {
+        title: "Contratos",
+        href: "/contratos",
+        icon: FileSignature,
+        roles: ROLES_CONTRATACION,
+      },
+      {
+        title: "Historial",
+        href: "/historial",
+        icon: History,
+        roles: ROLES_CONTRATACION,
+      },
+      {
+        title: "Seguimiento IPC",
+        href: "/ipc",
+        icon: TrendingUp,
+        roles: ROLES_CONTRATACION,
+      },
+    ],
+  },
+  {
     label: "Configuración",
     collapsible: true,
     items: [
@@ -84,6 +117,12 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Servicios",
         href: "/servicios",
         icon: ClipboardList,
+        roles: ["superadmin"],
+      },
+      {
+        title: "Grupos de servicio",
+        href: "/configuracion/grupos-servicio",
+        icon: Boxes,
         roles: ["superadmin"],
       },
       {
@@ -111,6 +150,18 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["superadmin"],
       },
       {
+        title: "Categorías",
+        href: "/configuracion/categorias",
+        icon: FolderTree,
+        roles: ["superadmin"],
+      },
+      {
+        title: "Programas",
+        href: "/configuracion/programas",
+        icon: FolderKanban,
+        roles: ["superadmin"],
+      },
+      {
         title: "Tipos de IPS",
         href: "/configuracion/tipos-ips",
         icon: Stethoscope,
@@ -126,6 +177,12 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Aseguradores",
         href: "/configuracion/aseguradores",
         icon: ShieldCheck,
+        roles: ["superadmin"],
+      },
+      {
+        title: "IPC Nacional",
+        href: "/configuracion/ipc-nacional",
+        icon: Globe,
         roles: ["superadmin"],
       },
       {

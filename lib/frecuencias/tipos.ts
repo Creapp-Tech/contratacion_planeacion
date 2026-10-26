@@ -15,3 +15,7 @@ export const TIPO_FRECUENCIA_VALUES: [TipoFrecuencia, ...TipoFrecuencia[]] = [
 export function etiquetaTipoFrecuencia(value: string): string {
   return TIPOS_FRECUENCIA.find((t) => t.value === value)?.label ?? value
 }
+
+export function tipoCalculaOcupacion(value: string): boolean {
+  return value === "nota_tecnica_viva" || value === "ejecucion_servicios"
+}

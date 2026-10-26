@@ -7,9 +7,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { Frecuencia } from "@/lib/frecuencias/queries"
-import { etiquetaTipoFrecuencia } from "@/lib/frecuencias/tipos"
+import { etiquetaTipoFrecuencia, tipoCalculaOcupacion } from "@/lib/frecuencias/tipos"
 
 import { FrecuenciaAcciones } from "./frecuencia-acciones"
+import { FrecuenciaCalculoSwitch } from "./frecuencia-calculo-switch"
 
 export function FrecuenciasTabla({
   frecuencias,
@@ -35,6 +36,7 @@ export function FrecuenciasTabla({
             <TableHead>Régimen</TableHead>
             <TableHead>Asegurador</TableHead>
             <TableHead>Versión</TableHead>
+            <TableHead>Cálculo de ocupación</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -52,7 +54,24 @@ export function FrecuenciasTabla({
               <TableCell>{frecuencia.asegurador_nombre}</TableCell>
               <TableCell>{frecuencia.version}</TableCell>
               <TableCell>
-                <FrecuenciaAcciones id={frecuencia.id} />
+                {tipoCalculaOcupacion(frecuencia.tipo_frecuencia) ? (
+                  <FrecuenciaCalculoSwitch
+                    id={frecuencia.id}
+                    sedeNombre={frecuencia.sede_nombre}
+                    nombre={frecuencia.nombre_nota_tecnica}
+                    version={frecuencia.version}
+                    marcada={frecuencia.usar_en_calculo}
+                    activa={frecuencia.activo}
+                  />
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <FrecuenciaAcciones
+                  id={frecuencia.id}
+                  marcada={frecuencia.usar_en_calculo}
+                />
               </TableCell>
             </TableRow>
           ))}

@@ -64,7 +64,7 @@ export type FrecuenciaFormOpciones = {
   sedes: { id: string; nombre: string }[]
   regimenes: { id: string; nombre: string }[]
   aseguradores: { id: string; nombre: string }[]
-  servicios: { id: string; nombre: string }[]
+  servicios: { id: string; nombre: string; grupo: string | null }[]
 }
 
 type FrecuenciaFormProps = {
@@ -323,7 +323,14 @@ export function FrecuenciaForm({
                     <Select
                       value={servicioField.value}
                       onValueChange={servicioField.onChange}
-                      items={toItems(opciones.servicios)}
+                      items={toItems(
+                        opciones.servicios.map((servicio) => ({
+                          id: servicio.id,
+                          nombre: servicio.grupo
+                            ? `${servicio.nombre} (${servicio.grupo})`
+                            : servicio.nombre,
+                        }))
+                      )}
                     >
                       <SelectTrigger
                         id={`servicios.${index}.servicio_id`}
@@ -334,7 +341,9 @@ export function FrecuenciaForm({
                       <SelectContent>
                         {opciones.servicios.map((servicio) => (
                           <SelectItem key={servicio.id} value={servicio.id}>
-                            {servicio.nombre}
+                            {servicio.grupo
+                              ? `${servicio.nombre} (${servicio.grupo})`
+                              : servicio.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>

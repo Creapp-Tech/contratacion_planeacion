@@ -19,7 +19,13 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button"
 import { cn } from "cn"
 
-export function FrecuenciaAcciones({ id }: { id: string }) {
+export function FrecuenciaAcciones({
+  id,
+  marcada = false,
+}: {
+  id: string
+  marcada?: boolean
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -74,6 +80,9 @@ export function FrecuenciaAcciones({ id }: { id: string }) {
             <AlertDialogDescription>
               Se eliminará la frecuencia de uso. Esta acción no se puede
               deshacer.
+              {marcada
+                ? " Esta frecuencia se usa para el cálculo de ocupación: su sede quedará sin frecuencia de cálculo hasta que marques otra."
+                : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error ? (

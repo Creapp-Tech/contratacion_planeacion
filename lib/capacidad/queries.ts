@@ -75,11 +75,15 @@ export type FrecuenciaAreaCruda = {
   areaId: string
   tipoFrecuencia: "nota_tecnica_viva" | "ejecucion_servicios"
   frecuencia: number
+  nombreNotaTecnica: string
+  version: string
 }
 
 type FrecuenciaAnidadaCruda = {
   sede_id: string
   tipo_frecuencia: string
+  nombre_nota_tecnica: string
+  version: string
   frecuencias_servicios:
     | {
         frecuencia: number
@@ -96,12 +100,15 @@ export async function listFrecuenciasAreas(): Promise<FrecuenciaAreaCruda[]> {
     .select(
       `sede_id,
        tipo_frecuencia,
+       nombre_nota_tecnica,
+       version,
        frecuencias_servicios(
          frecuencia,
          servicios(area_id, activo)
        )`
     )
     .eq("activo", true)
+    .eq("usar_en_calculo", true)
     .in("tipo_frecuencia", ["nota_tecnica_viva", "ejecucion_servicios"])
 
   if (error) throw error
@@ -125,6 +132,8 @@ export async function listFrecuenciasAreas(): Promise<FrecuenciaAreaCruda[]> {
         areaId: servicio.area_id,
         tipoFrecuencia: fila.tipo_frecuencia,
         frecuencia: detalle.frecuencia,
+        nombreNotaTecnica: fila.nombre_nota_tecnica,
+        version: fila.version,
       })
     }
   }

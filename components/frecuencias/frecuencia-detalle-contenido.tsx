@@ -2,7 +2,10 @@ import { notFound } from "next/navigation"
 
 import { requireSuperadmin } from "@/lib/auth/session"
 import { getFrecuencia } from "@/lib/frecuencias/queries"
-import { etiquetaTipoFrecuencia } from "@/lib/frecuencias/tipos"
+import {
+  etiquetaTipoFrecuencia,
+  tipoCalculaOcupacion,
+} from "@/lib/frecuencias/tipos"
 
 import { FrecuenciaServiciosFiltros } from "./frecuencia-servicios-filtros"
 
@@ -30,6 +33,15 @@ export async function FrecuenciaDetalleContenido({
     { label: "Regional", value: frecuencia.regional ?? "—" },
     { label: "Zonal", value: frecuencia.zonal ?? "—" },
   ]
+
+  if (tipoCalculaOcupacion(frecuencia.tipo_frecuencia)) {
+    encabezado.push({
+      label: "Cálculo de ocupación",
+      value: frecuencia.usar_en_calculo
+        ? "En uso para el cálculo de ocupación"
+        : "No se usa para el cálculo de ocupación",
+    })
+  }
 
   return (
     <div className="flex flex-col gap-6">

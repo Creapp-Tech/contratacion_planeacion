@@ -1,4 +1,6 @@
 import {
+  FolderKanban,
+  FolderTree,
   Layers,
   MapPinned,
   Stethoscope,
@@ -7,7 +9,14 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-export type CatalogoDominio = "marca" | "nivel" | "tipo_ips" | "zonal" | "tipo_personal"
+export type CatalogoDominio =
+  | "marca"
+  | "nivel"
+  | "tipo_ips"
+  | "zonal"
+  | "tipo_personal"
+  | "categoria"
+  | "programa"
 
 export interface CatalogoConfig {
   dominio: CatalogoDominio
@@ -57,6 +66,22 @@ export const CATALOGOS: Record<CatalogoDominio, CatalogoConfig> = {
     singular: "tipo de personal",
     ruta: "/configuracion/tipos-personal",
     icono: Users,
+    usaDescripcion: false,
+  },
+  categoria: {
+    dominio: "categoria",
+    titulo: "Categorías",
+    singular: "categoría",
+    ruta: "/configuracion/categorias",
+    icono: FolderTree,
+    usaDescripcion: false,
+  },
+  programa: {
+    dominio: "programa",
+    titulo: "Programas",
+    singular: "programa",
+    ruta: "/configuracion/programas",
+    icono: FolderKanban,
     usaDescripcion: false,
   },
 }

@@ -9,6 +9,8 @@ import {
   normalizarTipoFrecuencia,
   type FilaImportacion,
 } from "@/lib/frecuencias/importar"
+import { getFrecuenciaEnCalculo } from "@/lib/frecuencias/queries"
+import { tipoCalculaOcupacion } from "@/lib/frecuencias/tipos"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
   frecuenciaSchema,
@@ -110,6 +112,24 @@ export async function actualizarFrecuencia(
 
   const supabase = createAdminClient()
 
+  const { data: actual, error: actualError } = await supabase
+    .from("frecuencias")
+    .select("sede_id, tipo_frecuencia, usar_en_calculo")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (actualError) return { error: actualError.message }
+
+  if (
+    actual?.usar_en_calculo &&
+    (actual.sede_id !== sede_id || actual.tipo_frecuencia !== tipo_frecuencia)
+  ) {
+    return {
+      error:
+        "Esta frecuencia se usa para el cálculo de ocupación. Desmárcala antes de cambiar la sede o el tipo.",
+    }
+  }
+
   const { error } = await supabase
     .from("frecuencias")
     .update({
@@ -198,6 +218,108 @@ export async function eliminarFrecuencia(
   return { success: true }
 }
 
+function revalidarCalculo(id: string) {
+  revalidatePath(FRECUENCIAS_PATH)
+  revalidatePath(`${FRECUENCIAS_PATH}/${id}`)
+  revalidatePath("/capacidad-instalada")
+}
+
+function mensajeErrorCalculo(error: { code?: string; message: string }) {
+  if (error.code === "23505") {
+    return "Otra frecuencia de esa sede y tipo ya está marcada para el cálculo. Vuelve a intentarlo."
+  }
+  return error.message
+}
+
+export async function consultarReemplazoCalculo(
+  id: string
+): Promise<{ reemplazo: Awaited<ReturnType<typeof getFrecuenciaEnCalculo>> } | { error: string }> {
+  await requireSuperadmin()
+
+  const { data, error } = await createAdminClient()
+    .from("frecuencias")
+    .select("sede_id, tipo_frecuencia, activo")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  if (!data) return { error: "La frecuencia ya no existe." }
+  if (!data.activo) return { error: "No puedes marcar una frecuencia inactiva." }
+  if (!tipoCalculaOcupacion(data.tipo_frecuencia)) {
+    return {
+      error: "Este tipo de frecuencia no se usa en el cálculo de ocupación.",
+    }
+  }
+
+  const reemplazo = await getFrecuenciaEnCalculo(
+    data.sede_id,
+    data.tipo_frecuencia,
+    id
+  )
+
+  return { reemplazo }
+}
+
+export async function alternarFrecuenciaCalculo(
+  id: string,
+  marcar: boolean
+): Promise<FrecuenciaActionResult> {
+  await requireSuperadmin()
+
+  const admin = createAdminClient()
+
+  const { data: frecuencia, error } = await admin
+    .from("frecuencias")
+    .select("id, sede_id, tipo_frecuencia, activo")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  if (!frecuencia) return { error: "La frecuencia ya no existe." }
+
+  if (!marcar) {
+    const { error: updateError } = await admin
+      .from("frecuencias")
+      .update({ usar_en_calculo: false })
+      .eq("id", id)
+
+    if (updateError) return { error: mensajeErrorCalculo(updateError) }
+
+    revalidarCalculo(id)
+    return { success: true }
+  }
+
+  if (!frecuencia.activo) {
+    return { error: "No puedes marcar una frecuencia inactiva." }
+  }
+
+  if (!tipoCalculaOcupacion(frecuencia.tipo_frecuencia)) {
+    return {
+      error: "Este tipo de frecuencia no se usa en el cálculo de ocupación.",
+    }
+  }
+
+  const { error: unmarkError } = await admin
+    .from("frecuencias")
+    .update({ usar_en_calculo: false })
+    .eq("sede_id", frecuencia.sede_id)
+    .eq("tipo_frecuencia", frecuencia.tipo_frecuencia)
+    .eq("usar_en_calculo", true)
+    .neq("id", id)
+
+  if (unmarkError) return { error: mensajeErrorCalculo(unmarkError) }
+
+  const { error: markError } = await admin
+    .from("frecuencias")
+    .update({ usar_en_calculo: true })
+    .eq("id", id)
+
+  if (markError) return { error: mensajeErrorCalculo(markError) }
+
+  revalidarCalculo(id)
+  return { success: true }
+}
+
 export type ImportarFrecuenciasResultado = {
   importadas: number
   actualizadas: number
@@ -211,6 +333,7 @@ type GrupoFrecuencia = {
   regimen_id: string
   asegurador_eps_id: string
   version: string
+  usar_en_calculo: boolean | null
   servicios: { servicio_id: string; frecuencia: number; fila: number }[]
 }
 
@@ -238,6 +361,12 @@ export async function importarFrecuencias(
       s.id,
     ])
   )
+  const mapaSedesPorId = new Map(
+    ((sedes.data ?? []) as { id: string; nombre: string }[]).map((s) => [
+      s.id,
+      s.nombre,
+    ])
+  )
   const mapaRegimenes = new Map(
     ((regimenes.data ?? []) as { id: string; nombre: string }[]).map((r) => [
       normalizarNombre(r.nombre),
@@ -253,6 +382,12 @@ export async function importarFrecuencias(
     ((servicios.data ?? []) as { id: string; nombre: string }[]).map((s) => [
       normalizarNombre(s.nombre),
       s.id,
+    ])
+  )
+  const mapaServiciosPorId = new Map(
+    ((servicios.data ?? []) as { id: string; nombre: string }[]).map((s) => [
+      s.id,
+      s,
     ])
   )
 
@@ -273,6 +408,17 @@ export async function importarFrecuencias(
       resultado.omitidas.push({
         fila: numeroFila,
         motivo: `Tipo de frecuencia inválido: "${frecuencia.tipo_frecuencia}"`,
+      })
+      continue
+    }
+
+    if (
+      frecuencia.usar_en_calculo === true &&
+      !tipoCalculaOcupacion(tipoFrecuencia)
+    ) {
+      resultado.omitidas.push({
+        fila: numeroFila,
+        motivo: "Este tipo de frecuencia no se usa en el cálculo de ocupación",
       })
       continue
     }
@@ -334,18 +480,34 @@ export async function importarFrecuencias(
       continue
     }
 
-    if (!frecuencia.servicio) {
+    if (!frecuencia.servicio && !frecuencia.servicio_id) {
       resultado.omitidas.push({ fila: numeroFila, motivo: "Falta el servicio" })
       continue
     }
 
-    const servicioId = mapaServicios.get(normalizarNombre(frecuencia.servicio))
-    if (!servicioId) {
-      resultado.omitidas.push({
-        fila: numeroFila,
-        motivo: `Servicio no encontrado: "${frecuencia.servicio}"`,
-      })
-      continue
+    let servicioId: string | undefined
+    let etiquetaServicio = frecuencia.servicio
+
+    if (frecuencia.servicio_id) {
+      const encontrado = mapaServiciosPorId.get(frecuencia.servicio_id)
+      if (!encontrado) {
+        resultado.omitidas.push({
+          fila: numeroFila,
+          motivo: `Servicio no encontrado (id): "${frecuencia.servicio_id}"`,
+        })
+        continue
+      }
+      servicioId = encontrado.id
+      etiquetaServicio = encontrado.nombre
+    } else {
+      servicioId = mapaServicios.get(normalizarNombre(frecuencia.servicio))
+      if (!servicioId) {
+        resultado.omitidas.push({
+          fila: numeroFila,
+          motivo: `Servicio no encontrado: "${frecuencia.servicio}"`,
+        })
+        continue
+      }
     }
 
     if (frecuencia.frecuencia == null) {
@@ -374,15 +536,27 @@ export async function importarFrecuencias(
         regimen_id: regimenId,
         asegurador_eps_id: aseguradorId,
         version: frecuencia.version,
+        usar_en_calculo: frecuencia.usar_en_calculo,
         servicios: [],
       }
       grupos.set(clave, grupo)
+    } else if (frecuencia.usar_en_calculo !== null) {
+      if (grupo.usar_en_calculo === null) {
+        grupo.usar_en_calculo = frecuencia.usar_en_calculo
+      } else if (grupo.usar_en_calculo !== frecuencia.usar_en_calculo) {
+        resultado.omitidas.push({
+          fila: numeroFila,
+          motivo:
+            "El valor de usar_en_calculo no coincide con las demás filas de la misma frecuencia",
+        })
+        continue
+      }
     }
 
     if (grupo.servicios.some((s) => s.servicio_id === servicioId)) {
       resultado.omitidas.push({
         fila: numeroFila,
-        motivo: `Servicio duplicado en el mismo encabezado: "${frecuencia.servicio}"`,
+        motivo: `Servicio duplicado en el mismo encabezado: "${etiquetaServicio || servicioId}"`,
       })
       continue
     }
@@ -392,6 +566,26 @@ export async function importarFrecuencias(
       frecuencia: frecuencia.frecuencia,
       fila: numeroFila,
     })
+  }
+
+  const marcadasPorSedeTipo = new Map<string, GrupoFrecuencia[]>()
+  for (const grupo of grupos.values()) {
+    if (grupo.usar_en_calculo !== true) continue
+    const clave = `${grupo.sede_id}|${grupo.tipo_frecuencia}`
+    const lista = marcadasPorSedeTipo.get(clave) ?? []
+    lista.push(grupo)
+    marcadasPorSedeTipo.set(clave, lista)
+  }
+
+  for (const lista of marcadasPorSedeTipo.values()) {
+    if (lista.length <= 1) continue
+    const sede = mapaSedesPorId.get(lista[0].sede_id) ?? "Sede desconocida"
+    const detalle = lista
+      .map((grupo) => `"${grupo.nombre_nota_tecnica}" v${grupo.version}`)
+      .join(", ")
+    return {
+      error: `El archivo marca más de una frecuencia para el mismo tipo en la sede ${sede}: ${detalle}. Deja solo una marcada e inténtalo de nuevo.`,
+    }
   }
 
   for (const grupo of grupos.values()) {
@@ -502,11 +696,52 @@ export async function importarFrecuencias(
       }
     }
 
+    if (grupo.usar_en_calculo !== null) {
+      let flagError: { message: string } | null = null
+
+      if (grupo.usar_en_calculo) {
+        const { error: unmarkError } = await admin
+          .from("frecuencias")
+          .update({ usar_en_calculo: false })
+          .eq("sede_id", grupo.sede_id)
+          .eq("tipo_frecuencia", grupo.tipo_frecuencia)
+          .eq("usar_en_calculo", true)
+          .neq("id", frecuenciaId)
+
+        if (unmarkError) {
+          flagError = unmarkError
+        } else {
+          const { error: markError } = await admin
+            .from("frecuencias")
+            .update({ usar_en_calculo: true })
+            .eq("id", frecuenciaId)
+          flagError = markError
+        }
+      } else {
+        const { error: unmarkError } = await admin
+          .from("frecuencias")
+          .update({ usar_en_calculo: false })
+          .eq("id", frecuenciaId)
+        flagError = unmarkError
+      }
+
+      if (flagError) {
+        for (const servicio of grupo.servicios) {
+          resultado.omitidas.push({
+            fila: servicio.fila,
+            motivo: `No se pudo actualizar usar_en_calculo: ${flagError.message}`,
+          })
+        }
+        huboErrores = true
+      }
+    }
+
     if (esNueva && !huboErrores) {
       resultado.importadas++
     }
   }
 
   revalidatePath(FRECUENCIAS_PATH)
+  revalidatePath("/capacidad-instalada")
   return resultado
 }

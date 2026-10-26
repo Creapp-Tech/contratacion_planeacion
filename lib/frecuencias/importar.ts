@@ -34,7 +34,9 @@ export type FrecuenciaImportada = {
   asegurador: string
   version: string
   servicio: string
+  servicio_id: string | null
   frecuencia: number | null
+  usar_en_calculo: boolean | null
 }
 
 export const ALIAS_COLUMNAS: Record<string, keyof FrecuenciaImportada> = {
@@ -66,9 +68,18 @@ export const ALIAS_COLUMNAS: Record<string, keyof FrecuenciaImportada> = {
   servicios: "servicio",
   servicio_nombre: "servicio",
   nombre_servicio: "servicio",
+  servicio_id: "servicio_id",
+  id_servicio: "servicio_id",
   frecuencia: "frecuencia",
   valor: "frecuencia",
   valor_frecuencia: "frecuencia",
+  usar_en_calculo: "usar_en_calculo",
+  usar_para_calculo: "usar_en_calculo",
+  usar_calculo: "usar_en_calculo",
+  en_calculo: "usar_en_calculo",
+  calculo: "usar_en_calculo",
+  calculo_ocupacion: "usar_en_calculo",
+  marcar_calculo: "usar_en_calculo",
 }
 
 export function normalizarEncabezado(value: string) {
@@ -186,6 +197,32 @@ export function parseCsv(texto: string): FilaImportacion[] {
   })
 }
 
+const TOKENS_VERDADERO = new Set([
+  "si",
+  "s",
+  "true",
+  "1",
+  "x",
+  "usar",
+  "marcada",
+  "marcado",
+])
+
+const TOKENS_FALSO = new Set(["no", "n", "false", "0", "no usar"])
+
+export function parsearBooleano(value: string | undefined): boolean | null {
+  if (esValorVacio(value)) return null
+  const normalizado = (value as string)
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+
+  if (TOKENS_VERDADERO.has(normalizado)) return true
+  if (TOKENS_FALSO.has(normalizado)) return false
+  return null
+}
+
 export function mapearFila(fila: FilaImportacion): FrecuenciaImportada {
   const resultado: Partial<Record<keyof FrecuenciaImportada, string>> = {}
 
@@ -216,7 +253,9 @@ export function mapearFila(fila: FilaImportacion): FrecuenciaImportada {
     asegurador: texto(resultado.asegurador) ?? "",
     version: texto(resultado.version) ?? "",
     servicio: texto(resultado.servicio) ?? "",
+    servicio_id: texto(resultado.servicio_id),
     frecuencia: decimal(resultado.frecuencia),
+    usar_en_calculo: parsearBooleano(resultado.usar_en_calculo),
   }
 }
 

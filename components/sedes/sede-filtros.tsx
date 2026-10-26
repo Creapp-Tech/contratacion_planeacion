@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
-import { Loader2Icon, SearchIcon, XIcon } from "lucide-react"
+import { Loader2Icon, RefreshCwIcon, SearchIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,25 +13,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { SEDE_ESTADOS } from "@/lib/sedes/estados"
 import type { OpcionesFiltros, SedeFiltros } from "@/lib/sedes/queries"
-import { DepFiltrosSedes } from "@/components/sedes/sede-dep-filtros"
 
 const ALL = "__all__"
 
-function toItems(placeholder: string, values: string[]) {
-  return Object.fromEntries([
-    [ALL, placeholder],
-    ...values.map((value) => [value, value]),
-  ])
+type FiltroFiltrosUI = Pick<
+  SedeFiltros,
+  "q" | "departamento" | "municipio" | "asegurador" | "marca"
+>
+
+function opcionesTexto(placeholder: string, valores: string[]) {
+  return {
+    items: Object.fromEntries([
+      [ALL, placeholder],
+      ...valores.map((valor) => [valor, valor]),
+    ]),
+    options: [
+      { value: ALL, label: placeholder },
+      ...valores.map((valor) => ({ value: valor, label: valor })),
+    ],
+  }
 }
 
 type FiltroSelectProps = {
   id: string
   value: string | undefined
   placeholder: string
-  items: Record<string, string>
-  options: { value: string; label: string }[]
+  vacio: string
+  valores: string[]
+  disabled?: boolean
   onChange: (value: string | undefined) => void
 }
 
@@ -39,10 +49,13 @@ function FiltroSelect({
   id,
   value,
   placeholder,
-  items,
-  options,
+  vacio,
+  valores,
+  disabled,
   onChange,
 }: FiltroSelectProps) {
+  const { items, options } = opcionesTexto(placeholder, valores)
+
   return (
     <Select
       value={value ?? ALL}
@@ -50,16 +63,23 @@ function FiltroSelect({
         onChange(next === ALL || next == null ? undefined : next)
       }
       items={items}
+      disabled={disabled || valores.length === 0}
     >
-      <SelectTrigger id={id} className="w-full sm:w-48">
+      <SelectTrigger id={id} className="w-full sm:w-44">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
+        {valores.length === 0 ? (
+          <SelectItem value={ALL} disabled>
+            {vacio}
           </SelectItem>
-        ))}
+        ) : (
+          options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))
+        )}
       </SelectContent>
     </Select>
   )
@@ -68,37 +88,19 @@ function FiltroSelect({
 export function SedeFiltros({
   opciones,
   filtros,
-  modoDepFiltro = "geografico",
+  verRegional,
+  opcionesError,
 }: {
   opciones: OpcionesFiltros
-  filtros: SedeFiltros
-  modoDepFiltro?: "geografico" | "administrativo"
+  filtros: FiltroFiltrosUI
+  verRegional: boolean
+  opcionesError?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
   const [q, setQ] = useState(filtros.q ?? "")
-
-  const departamentoOptions = [
-    { value: ALL, label: "Todos los departamentos" },
-    ...opciones.departamentos.map((value) => ({ value, label: value })),
-  ]
-  const regionalOptions = [
-    { value: ALL, label: "Todas las regionales" },
-    ...opciones.regionales.map((value) => ({ value, label: value })),
-  ]
-  const marcaOptions = [
-    { value: ALL, label: "Todas las marcas" },
-    ...opciones.marcas.map((value) => ({ value, label: value })),
-  ]
-  const estadoOptions = [
-    { value: ALL, label: "Todos los estados" },
-    ...SEDE_ESTADOS.map((estado) => ({
-      value: estado.value,
-      label: estado.label,
-    })),
-  ]
 
   function updateParams(next: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString())
@@ -115,91 +117,130 @@ export function SedeFiltros({
   }
 
   const hasFiltros = Boolean(
-    filtros.q || filtros.departamento || filtros.regional || filtros.marca || filtros.estado
+    filtros.q ||
+      filtros.departamento ||
+      filtros.municipio ||
+      filtros.asegurador ||
+      filtros.marca ||
+      searchParams.get("regional")
   )
 
+  const filtrosVacios =
+    opcionesError ||
+    (!opciones.regionales.length &&
+      !opciones.departamentos.length &&
+      !opciones.municipios.length &&
+      !opciones.aseguradores.length &&
+      !opciones.marcas.length)
+
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <form
-        className="relative flex-1 sm:min-w-64"
-        onSubmit={(event) => {
-          event.preventDefault()
-          updateParams({ q: q.trim() || undefined })
-        }}
-      >
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(event) => setQ(event.target.value)}
-          placeholder="Buscar por nombre"
-          className="pl-8"
-          aria-label="Buscar sedes"
-        />
-      </form>
-
-      <FiltroSelect
-        id="filtro-departamento"
-        value={filtros.departamento}
-        placeholder="Departamento"
-        items={toItems("Todos los departamentos", opciones.departamentos)}
-        options={departamentoOptions}
-        onChange={(value) => updateParams({ departamento: value })}
-      />
-
-      <FiltroSelect
-        id="filtro-regional"
-        value={filtros.regional}
-        placeholder="Regional"
-        items={toItems("Todas las regionales", opciones.regionales)}
-        options={regionalOptions}
-        onChange={(value) => updateParams({ regional: value })}
-      />
-
-      <FiltroSelect
-        id="filtro-marca"
-        value={filtros.marca}
-        placeholder="Marca"
-        items={toItems("Todas las marcas", opciones.marcas)}
-        options={marcaOptions}
-        onChange={(value) => updateParams({ marca: value })}
-      />
-
-      <FiltroSelect
-        id="filtro-estado"
-        value={filtros.estado}
-        placeholder="Estado"
-        items={toItems(
-          "Todos los estados",
-          SEDE_ESTADOS.map((estado) => estado.value)
-        )}
-        options={estadoOptions}
-        onChange={(value) => updateParams({ estado: value })}
-      />
-
-      <DepFiltrosSedes
-        modo={modoDepFiltro}
-        onSedeSeleccionada={(sede) => {
-          updateParams({ sede: sede.id })
-        }}
-      />
-
-      {hasFiltros ? (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            setQ("")
-            startTransition(() => router.replace(pathname))
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+        <form
+          className="relative flex-1 lg:min-w-56"
+          onSubmit={(event) => {
+            event.preventDefault()
+            updateParams({ q: q.trim() || undefined })
           }}
         >
-          <XIcon />
-          Limpiar
-        </Button>
-      ) : null}
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Buscar por nombre"
+            className="pl-8"
+            aria-label="Buscar sedes"
+          />
+        </form>
 
-      {pending ? (
-        <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+        {verRegional ? (
+          <FiltroSelect
+            id="filtro-regional"
+            value={searchParams.get("regional") ?? undefined}
+            placeholder="Regional"
+            vacio="Sin regionales"
+            valores={opciones.regionales}
+            disabled={filtrosVacios}
+            onChange={(value) => updateParams({ regional: value })}
+          />
+        ) : null}
+
+        <FiltroSelect
+          id="filtro-departamento"
+          value={filtros.departamento}
+          placeholder="Departamento"
+          vacio="Sin departamentos"
+          valores={opciones.departamentos}
+          disabled={filtrosVacios}
+          onChange={(value) =>
+            updateParams({ departamento: value, municipio: undefined })
+          }
+        />
+
+        <FiltroSelect
+          id="filtro-municipio"
+          value={filtros.municipio}
+          placeholder="Municipio"
+          vacio="Sin municipios"
+          valores={opciones.municipios}
+          disabled={filtrosVacios}
+          onChange={(value) => updateParams({ municipio: value })}
+        />
+
+        <FiltroSelect
+          id="filtro-asegurador"
+          value={filtros.asegurador}
+          placeholder="Asegurador"
+          vacio="Sin aseguradores"
+          valores={opciones.aseguradores}
+          disabled={filtrosVacios}
+          onChange={(value) => updateParams({ asegurador: value })}
+        />
+
+        <FiltroSelect
+          id="filtro-marca"
+          value={filtros.marca}
+          placeholder="Marca"
+          vacio="Todas las marcas"
+          valores={opciones.marcas}
+          disabled={filtrosVacios}
+          onChange={(value) => updateParams({ marca: value })}
+        />
+
+        {hasFiltros ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setQ("")
+              startTransition(() => router.replace(pathname))
+            }}
+          >
+            <XIcon />
+            Limpiar
+          </Button>
+        ) : null}
+
+        {pending ? (
+          <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+        ) : null}
+      </div>
+
+      {filtrosVacios ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">
+          <span>No se pudieron cargar los filtros.</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.refresh()}
+          >
+            <RefreshCwIcon />
+            Reintentar
+          </Button>
+        </div>
       ) : null}
     </div>
   )
 }
+

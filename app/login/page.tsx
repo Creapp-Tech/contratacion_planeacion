@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Image from "next/image"
+import { Suspense } from "react"
 import { Building2Icon, ClipboardListIcon, UsersIcon } from "lucide-react"
 
 import { LoginForm } from "@/components/login-form"
@@ -76,10 +77,23 @@ export default function LoginPage() {
           />
         </div>
 
-        <LoginForm />
+        <Suspense fallback={<LoginFormFallback />}>
+          <LoginForm />
+        </Suspense>
 
         <p className="text-xs text-muted-foreground">© VIVA 1A IPS</p>
       </section>
     </main>
+  )
+}
+
+function LoginFormFallback() {
+  return (
+    <div className="w-full max-w-md rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
+      <div className="mx-auto h-5 w-32 animate-pulse rounded bg-muted" />
+      <div className="mt-6 h-9 w-full animate-pulse rounded bg-muted" />
+      <div className="mt-4 h-9 w-full animate-pulse rounded bg-muted" />
+      <div className="mt-6 h-11 w-full animate-pulse rounded bg-muted" />
+    </div>
   )
 }

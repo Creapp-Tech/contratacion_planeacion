@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useSearchParams } from "next/navigation"
 import {
   EyeIcon,
   EyeOffIcon,
@@ -30,9 +31,38 @@ import {
 } from "@/components/ui/input-group"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
 
+// Parámetros que nunca deben propagarse por la URL (credenciales en claro).
+const PARAMS_CREDENCIALES = ["usuario", "password", "contrasena", "contraseña", "correo"]
+
+function extraerRedirectTo(searchParams: URLSearchParams): string | undefined {
+  const valor = searchParams.get("redirectTo")
+  if (!valor) return undefined
+  // Sólo aceptamos rutas internas; nunca procesamos valores con host/esquema.
+  if (!valor.startsWith("/") || valor.startsWith("//")) return undefined
+  return valor
+}
+
 export function LoginForm() {
+  const searchParams = useSearchParams()
   const [serverError, setServerError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+
+  const redirectTo = useMemo(
+    () => extraerRedirectTo(new URLSearchParams(searchParams.toString())),
+    [searchParams]
+  )
+
+  // Al montar: ignora y elimina de la barra de direcciones cualquier
+  // credencial que haya llegado por query string, sin procesarla ni loguearla.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    const tieneCredenciales = PARAMS_CREDENCIALES.some((p) => params.has(p))
+    if (tieneCredenciales) {
+      const limpio = new URL(window.location.href)
+      PARAMS_CREDENCIALES.forEach((p) => limpio.searchParams.delete(p))
+      window.history.replaceState({}, "", `${limpio.pathname}${limpio.search}`)
+    }
+  }, [searchParams])
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -47,7 +77,7 @@ export function LoginForm() {
 
   async function onSubmit(values: LoginInput) {
     setServerError(null)
-    const result = await login(values)
+    const result = await login({ ...values, redirectTo })
     if (result?.error) {
       setServerError(result.error)
     }
@@ -62,7 +92,7 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} method="post" noValidate>
           <FieldGroup>
             {serverError ? (
               <Alert variant="destructive">

@@ -1,6 +1,7 @@
 import { requireSuperadmin } from "@/lib/auth/session"
 import { construirCsv } from "@/lib/frecuencias/importar"
 import { getFrecuencia } from "@/lib/frecuencias/queries"
+import { etiquetaServicio } from "@/lib/servicios/queries"
 
 export async function GET(
   _request: Request,
@@ -22,8 +23,10 @@ export async function GET(
     regimen: frecuencia.regimen_nombre,
     asegurador: frecuencia.asegurador_nombre,
     version: frecuencia.version,
-    servicio: servicio.servicio_nombre,
+    servicio_id: servicio.servicio_id,
+    servicio: etiquetaServicio(servicio.servicio_nombre, servicio.servicio_grupo),
     frecuencia: servicio.frecuencia,
+    duracion_minutos: servicio.servicio_duracion_minutos,
   }))
 
   const csv = construirCsv(filas)

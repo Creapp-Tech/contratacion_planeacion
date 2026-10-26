@@ -28,6 +28,10 @@ export async function FrecuenciasContenido({
     regional: pick(params.regional),
     regimen_id: pick(params.regimen_id),
     asegurador_eps_id: pick(params.asegurador_eps_id),
+    en_calculo:
+      params.en_calculo === "si" || params.en_calculo === "no"
+        ? params.en_calculo
+        : undefined,
   }
 
   const [frecuencias, opciones] = await Promise.all([

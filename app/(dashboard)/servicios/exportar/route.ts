@@ -9,7 +9,8 @@ export async function GET() {
 
   const filas = servicios.map((servicio) => ({
     nombre: servicio.nombre,
-    grupo: servicio.grupo,
+    grupo: servicio.grupo_nombre,
+    duracion_minutos: servicio.duracion_minutos,
     area: servicio.area_nombre,
     tipo_personal: servicio.tipo_personal,
     activo: servicio.activo ? "si" : "no",

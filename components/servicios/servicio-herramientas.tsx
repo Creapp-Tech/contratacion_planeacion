@@ -136,10 +136,11 @@ export function ServicioHerramientas({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Columnas: nombre* · grupo* · area · tipo de persona. Si el servicio ya
-        existe por nombre, se actualiza su grupo, área y tipo de persona. Las
-        opciones se omiten si el área o el tipo de persona no existen en el
-        catálogo.
+        Columnas: nombre* · grupo* · duracion_minutos (entero opcional, 1–1440)
+        · area · tipo de persona. El grupo debe coincidir con el catálogo de
+        grupos de servicio; si el servicio ya existe por nombre, se actualiza su
+        grupo, área, tipo de persona y duración. Las opciones se omiten si el
+        grupo, el área o el tipo de persona no existen en el catálogo.
       </p>
 
       {error ? (

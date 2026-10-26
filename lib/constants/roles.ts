@@ -33,6 +33,20 @@ export function puedeAccederPlaneacion(rol: string): boolean {
   return (ROLES_PLANEACION as readonly string[]).includes(rol)
 }
 
+export const ROLES_CONTRATACION: Rol[] = [
+  "superadmin",
+  "analista_contratacion",
+  "gerente_regional",
+]
+
+export function puedeAccederContratacion(rol: string): boolean {
+  return (ROLES_CONTRATACION as readonly string[]).includes(rol)
+}
+
+export function puedeEditarContratacion(rol: string): boolean {
+  return puedeAccederContratacion(rol)
+}
+
 export function esGerenteRegional(rol: string): boolean {
   return rol === "gerente_regional"
 }

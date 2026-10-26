@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useTransition } from "react"
 import { Loader2Icon, XIcon } from "lucide-react"
 
@@ -105,10 +105,13 @@ export function MapaFiltros({
     { value: ALL, label: "Todos los departamentos" },
     ...opciones.departamentos.map((value) => ({ value, label: value })),
   ]
-  const municipioOptionsRaw = [
-    { value: ALL, label: "Todos los municipios" },
-    ...opciones.municipios.map((value) => ({ value, label: value })),
-  ]
+  const municipioOptionsRaw = useMemo(
+    () => [
+      { value: ALL, label: "Todos los municipios" },
+      ...opciones.municipios.map((value) => ({ value, label: value })),
+    ],
+    [opciones.municipios]
+  )
   const aseguradorOptions = [
     { value: ALL, label: "Todos los aseguradores" },
     ...opciones.aseguradores.map((eps) => ({
