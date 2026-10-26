@@ -133,6 +133,40 @@ export async function crearSede(
     }
   }
 
+  // INSERTAR en sedes_relacion_filtros para que el listado muestre la nueva sede.
+  // Usamos el service_role key (createAdminClient), que evita RLS.
+  // Consultamos catalogos_opciones para obtener los IDs de regional/zonal a partir de los valores del formulario.
+  const regionalTexto = datos.regional ?? ""
+  const zonalTexto = datos.zonal ?? ""
+  let regionalId: string | null = null
+  let zonalId: string | null = null
+
+  // Buscamos el ID exacto en catalogos_opciones (usamos eq por que el formulario selecciona valores exactos del catálogo)
+  const { data: regionalCatalogo } = await admin
+    .from("catalogos_opciones")
+    .select("id")
+    .eq("dominio", "regional")
+    .eq("nombre", regionalTexto)
+    .maybeSingle()
+  const { data: zonalCatalogo } = await admin
+    .from("catalogos_opciones")
+    .select("id")
+    .eq("dominio", "zonal")
+    .eq("nombre", zonalTexto)
+    .maybeSingle()
+
+  if (regionalCatalogo?.id) regionalId = regionalCatalogo.id
+  if (zonalCatalogo?.id) zonalId = zonalCatalogo.id
+
+  await admin.from("sedes_relacion_filtros").insert({
+    regional_id: regionalId,
+    zonal_id: zonalId,
+    departamento: datos.departamento ?? "",
+    municipio: datos.municipio ?? "",
+    sede_id: data.id,
+    activo: true,
+  })
+
   revalidatePath(SEDES_PATH)
   return { success: true }
 }
