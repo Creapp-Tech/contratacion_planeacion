@@ -39,7 +39,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative z-10 max-w-md">
+        <div className="relative z-10 ">
           <h2 className="text-3xl font-semibold text-balance">
             Planeación de la contratación
           </h2>
@@ -89,8 +89,8 @@ export default function LoginPage() {
 
 function LoginFormFallback() {
   return (
-    <div className="w-full max-w-md rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
-      <div className="mx-auto h-5 w-32 animate-pulse rounded bg-muted" />
+    <div className="w-full rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
+      <div className="h-5 w-32 animate-pulse rounded bg-muted" />
       <div className="mt-6 h-9 w-full animate-pulse rounded bg-muted" />
       <div className="mt-4 h-9 w-full animate-pulse rounded bg-muted" />
       <div className="mt-6 h-11 w-full animate-pulse rounded bg-muted" />

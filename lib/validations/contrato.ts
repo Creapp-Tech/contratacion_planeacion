@@ -83,6 +83,24 @@ export const contratoSchema = z
         "Ingresa una URL válida (http o https)"
       ),
     notas: z.string().trim().max(2000, "Las notas son demasiado largas").nullable(),
+    // --- Campos opcionales para crear documento (modificatorio/otro sí/anexo) ---
+    contrato_id: uuidOpcional,
+    tipo_documento: z
+      .enum(['primigenio','modificatorio','otro_si','anexo'])
+      .nullable(),
+    numero_documento: z.string().trim().max(100).nullable(),
+    fecha_otorgamiento: fechaOpcional,
+    archivo_url: z
+      .string()
+      .trim()
+      .max(500, "La URL es demasiado larga")
+      .nullable()
+      .refine(
+        (value) =>
+          value == null || value === "" || /^https?:\/\/\S+$/i.test(value),
+        "Ingresa una URL válida (http o https)"
+      ),
+    resumen_cambios: z.string().trim().max(1000).nullable(),
   })
   .superRefine((data, ctx) => {
     if (

@@ -9,7 +9,7 @@ import {
   formatoNumero,
   formatoPct,
   type ResumenMapa,
-} from "@/lib/sedes/ocupacion"
+} from "@/lib/sedes/ocupacion-utils"
 
 function Tarjeta({
   titulo,

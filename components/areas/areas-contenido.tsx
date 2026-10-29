@@ -1,11 +1,11 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoPlaneacion } from "@/lib/auth/session"
 import { listAreas, listGrupos } from "@/lib/areas/queries"
 
 import { AreasTabla } from "./areas-tabla"
 import { GrupoHerramientas } from "./grupo-herramientas"
 
 export async function AreasContenido() {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const [areas, grupos] = await Promise.all([listAreas(), listGrupos()])
 

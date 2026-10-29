@@ -1,5 +1,8 @@
+"use server"
+
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listAseguradores, type Asegurador } from "@/lib/sedes/queries"
+import { calcularOcupacion, type SedeMapa, type OpcionesMapa, type ResumenMapa } from "@/lib/sedes/ocupacion-utils"
 
 export type MapaFiltros = {
   regional?: string
@@ -12,43 +15,7 @@ export type MapaFiltros = {
   municipio?: string
 }
 
-export type SedeMapa = {
-  id: string
-  nombre: string
-  regional: string | null
-  zonal: string | null
-  marca: string | null
-  tipo_ips: string | null
-  departamento: string | null
-  municipio: string | null
-  estado: string
-  latitud: number | null
-  longitud: number | null
-  capacidad_usuarios: number | null
-  poblacion: number
-  ocupacion: number | null
-  aseguradores: string[]
-}
-
-export type OpcionesMapa = {
-  regionales: string[]
-  zonales: string[]
-  marcas: string[]
-  tiposIps: string[]
-  departamentos: string[]
-  municipios: string[]
-  aseguradores: Asegurador[]
-  sedes: { id: string; nombre: string }[]
-}
-
-export type ResumenMapa = {
-  sedes: number
-  conUbicacion: number
-  sinUbicacion: number
-  capacidad: number
-  poblacion: number
-  ocupacion: number | null
-}
+export type { SedeMapa, OpcionesMapa, ResumenMapa }
 
 type SedeCruda = {
   id: string
@@ -65,46 +32,6 @@ type SedeCruda = {
   capacidad_usuarios: number | null
   poblacion_aseguradora: { poblacion_activa: number | null }[] | null
   sedes_aseguradores: { aseguradores_eps: { nombre_eps: string } | null }[] | null
-}
-
-export function calcularOcupacion(
-  poblacion: number,
-  capacidad: number | null | undefined
-): number | null {
-  if (!capacidad || capacidad <= 0) return null
-  return (poblacion / capacidad) * 100
-}
-
-export type ColorOcupacion = {
-  hex: string
-  texto: string
-  etiqueta: "Sin datos" | "Baja" | "Óptima" | "Saturada"
-}
-
-export function colorOcupacion(pct: number | null): ColorOcupacion {
-  if (pct == null || !Number.isFinite(pct)) {
-    return { hex: "#9ca3af", texto: "#4b5563", etiqueta: "Sin datos" }
-  }
-  if (pct >= 100) {
-    return { hex: "#ef4444", texto: "#b91c1c", etiqueta: "Saturada" }
-  }
-  if (pct >= 50) {
-    return { hex: "#22c55e", texto: "#15803d", etiqueta: "Óptima" }
-  }
-  return { hex: "#f59e0b", texto: "#b45309", etiqueta: "Baja" }
-}
-
-export function formatoNumero(value: number | null | undefined): string {
-  if (value == null) return "—"
-  return new Intl.NumberFormat("es-CO").format(value)
-}
-
-export function formatoPct(pct: number | null): string {
-  if (pct == null || !Number.isFinite(pct)) return "—"
-  const valor = new Intl.NumberFormat("es-CO", {
-    maximumFractionDigits: 1,
-  }).format(pct)
-  return `${valor}%`
 }
 
 function mapearSedeMapa(sede: SedeCruda): SedeMapa {
@@ -133,6 +60,12 @@ function mapearSedeMapa(sede: SedeCruda): SedeMapa {
       .map((fila) => fila.aseguradores_eps?.nombre_eps)
       .filter((nombre): nombre is string => Boolean(nombre)),
   }
+}
+
+function unicos(valores: (string | null)[]): string[] {
+  return [
+    ...new Set(valores.filter((valor): valor is string => Boolean(valor))),
+  ].sort((a, b) => a.localeCompare(b))
 }
 
 export async function listSedesMapa(
@@ -174,12 +107,6 @@ export async function listSedesMapa(
   return ((data ?? []) as unknown as SedeCruda[]).map(mapearSedeMapa)
 }
 
-function unicos(valores: (string | null)[]): string[] {
-  return [
-    ...new Set(valores.filter((valor): valor is string => Boolean(valor))),
-  ].sort((a, b) => a.localeCompare(b))
-}
-
 export async function opcionesMapa(): Promise<OpcionesMapa> {
   const admin = createAdminClient()
 
@@ -213,26 +140,5 @@ export async function opcionesMapa(): Promise<OpcionesMapa> {
     municipios: unicos(filas.map((fila) => fila.municipio)),
     aseguradores,
     sedes: filas.map((fila) => ({ id: fila.id, nombre: fila.nombre })),
-  }
-}
-
-export function resumenMapa(sedes: SedeMapa[]): ResumenMapa {
-  const conUbicacion = sedes.filter(
-    (sede) => sede.latitud != null && sede.longitud != null
-  ).length
-
-  const capacidad = sedes.reduce(
-    (total, sede) => total + (sede.capacidad_usuarios ?? 0),
-    0
-  )
-  const poblacion = sedes.reduce((total, sede) => total + sede.poblacion, 0)
-
-  return {
-    sedes: sedes.length,
-    conUbicacion,
-    sinUbicacion: sedes.length - conUbicacion,
-    capacidad,
-    poblacion,
-    ocupacion: calcularOcupacion(poblacion, capacidad),
   }
 }

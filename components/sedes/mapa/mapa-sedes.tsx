@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic"
 
 import { Skeleton } from "@/components/ui/skeleton"
-import type { SedeMapa } from "@/lib/sedes/ocupacion"
+import type { SedeMapa } from "@/lib/sedes/ocupacion-utils"
 
 const MapaLeaflet = dynamic(() => import("./mapa-leaflet"), {
   ssr: false,

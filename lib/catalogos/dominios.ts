@@ -17,6 +17,7 @@ export type CatalogoDominio =
   | "tipo_personal"
   | "categoria"
   | "programa"
+  | "responsable"
 
 export interface CatalogoConfig {
   dominio: CatalogoDominio
@@ -82,6 +83,14 @@ export const CATALOGOS: Record<CatalogoDominio, CatalogoConfig> = {
     singular: "programa",
     ruta: "/configuracion/programas",
     icono: FolderKanban,
+    usaDescripcion: false,
+  },
+  responsable: {
+    dominio: "responsable",
+    titulo: "Responsables",
+    singular: "responsable",
+    ruta: "/configuracion/responsables",
+    icono: Users,
     usaDescripcion: false,
   },
 }

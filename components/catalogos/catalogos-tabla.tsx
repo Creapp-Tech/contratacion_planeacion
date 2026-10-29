@@ -41,7 +41,7 @@ export function CatalogosTabla({
             <TableRow key={item.id}>
               <TableCell className="font-medium">{item.nombre}</TableCell>
               {config.usaDescripcion ? (
-                <TableCell className="max-w-md text-muted-foreground">
+                <TableCell className=" text-muted-foreground">
                   {item.descripcion ?? "—"}
                 </TableCell>
               ) : null}

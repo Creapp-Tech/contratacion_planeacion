@@ -84,7 +84,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md shadow-xl shadow-foreground/5 ring-foreground/5">
+    <Card className="w-full shadow-xl shadow-foreground/5 ring-foreground/5">
       <CardHeader>
         <CardTitle className="text-xl">Iniciar sesión</CardTitle>
         <CardDescription>

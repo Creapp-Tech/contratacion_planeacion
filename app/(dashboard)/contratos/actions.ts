@@ -54,26 +54,16 @@ function limpiarOpcional(value: string | null) {
   return limpio ? limpio : null
 }
 
-async function responsableValido(
-  responsableId: string,
-  regionalId: string | null
-): Promise<boolean> {
+async function responsableValido(responsableId: string): Promise<boolean> {
   const { data, error } = await createAdminClient()
-    .from("usuarios")
-    .select("id, regional_id")
+    .from("catalogos_opciones")
+    .select("id")
+    .eq("dominio", "responsable")
+    .eq("activo", true)
     .eq("id", responsableId)
-    .eq("rol", "gerente_regional")
-    .eq("estado", "activo")
     .maybeSingle()
 
   if (error || !data) return false
-
-  if (
-    regionalId &&
-    (data as { regional_id: string | null }).regional_id !== regionalId
-  ) {
-    return false
-  }
 
   return true
 }
@@ -335,11 +325,8 @@ export async function crearContrato(
     datos.regional_id = alcance.regionalId
   }
 
-  if (!(await responsableValido(datos.responsable_id, datos.regional_id))) {
-    return {
-      error:
-        "El responsable debe ser un gerente regional activo de la regional del contrato",
-    }
+  if (!(await responsableValido(datos.responsable_id))) {
+    return { error: "El responsable seleccionado no existe o no está activo" }
   }
 
   let errorReferencias: string | null
@@ -417,11 +404,8 @@ export async function actualizarContrato(
     datos.regional_id = alcance.regionalId
   }
 
-  if (!(await responsableValido(datos.responsable_id, datos.regional_id))) {
-    return {
-      error:
-        "El responsable debe ser un gerente regional activo de la regional del contrato",
-    }
+  if (!(await responsableValido(datos.responsable_id))) {
+    return { error: "El responsable seleccionado no existe o no está activo" }
   }
 
   let errorReferencias: string | null
@@ -520,4 +504,154 @@ export async function eliminarContrato(
   revalidatePath(CONTRATOS_PATH, "layout")
   revalidatePath(HISTORIAL_PATH, "layout")
   return { success: true }
+}
+
+export type CrearDocumentoResult =
+  | { success: true; documentoId: string }
+  | { error: string }
+
+export async function crearDocumentoContrato(
+  contratoId: string,
+  input: ContratoInput,
+  documentoMeta: {
+    tipo_documento: 'primigenio' | 'modificatorio' | 'otro_si' | 'anexo'
+    numero_documento: string
+    fecha_otorgamiento: string | null
+    archivo_url: string
+    resumen_cambios: string | null
+  }
+): Promise<CrearDocumentoResult> {
+  if (!UUID_RE.test(contratoId)) return { error: "El contrato no existe" }
+  const usuario = await requireAccesoContratacion()
+  const alcance = alcanceContratos(usuario)
+
+  // Validar acceso al contrato base
+  const admin = createAdminClient()
+  const { data: contratoBase, error: errorContrato } = await admin
+    .from("contratos")
+    .select("id, regional_id, valor_total")
+    .eq("id", contratoId)
+    .maybeSingle()
+  if (errorContrato) return { error: errorContrato.message }
+  if (!contratoBase) return { error: "El contrato no existe" }
+  const regionalContr = (contratoBase as { regional_id: string }).regional_id
+  if (!alcance.verTodo && regionalContr !== alcance.regionalId) {
+    return { error: "Solo puedes gestionar contratos de tu regional" }
+  }
+
+  const parsed = contratoSchema.safeParse({ ...input, contrato_id: contratoId })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" }
+  }
+
+  // Verificar que hay un archivo_url válido (OneDrive pública)
+  const archivoUrl = documentoMeta.archivo_url?.trim()
+  if (!archivoUrl || !archivoUrl.startsWith("http")) {
+    return { error: "Debes proporcionar una URL válida del archivo (OneDrive)" }
+  }
+
+  const datos = parsed.data
+
+  const fechaOtorg =
+    documentoMeta.fecha_otorgamiento ?? datos.fecha_inicio ?? null
+
+  if (!documentoMeta.tipo_documento) {
+    return { error: "Selecciona el tipo de documento" }
+  }
+  if (!documentoMeta.numero_documento?.trim()) {
+    return { error: "Ingresa el número del documento" }
+  }
+
+  const camposAfectados: string[] = []
+  const base = contratoBase as unknown as {
+    valor_total: number | null
+    fecha_fin: string | null
+    poblacion_total: number | null
+  }
+  if (base.valor_total !== datos.valor_total) camposAfectados.push("valor_total")
+  if (base.fecha_fin !== datos.fecha_fin) camposAfectados.push("fecha_fin")
+  if (base.poblacion_total !== datos.poblacion_total)
+    camposAfectados.push("poblacion_total")
+
+  try {
+    // Obtener el número de versión más alto
+    const { data: versionActual } = await admin
+      .from("contrato_documentos")
+      .select("numero_version")
+      .eq("contrato_id", contratoId)
+      .order("numero_version", { ascending: false })
+      .limit(1)
+
+    const maxVersion =
+      versionActual && versionActual.length > 0
+        ? (versionActual[0] as { numero_version: number }).numero_version
+        : 0
+    const nuevoNumeroVersion = maxVersion + 1
+
+    // Marcar como no vigente al documento vigente anterior
+    const vigenteActual = await admin
+      .from("contrato_documentos")
+      .select("id")
+      .eq("contrato_id", contratoId)
+      .eq("es_vigente", true)
+      .maybeSingle()
+
+    if (vigenteActual?.data) {
+      const { error: errVigente } = await admin
+        .from("contrato_documentos")
+        .update({ es_vigente: false })
+        .eq("id", (vigenteActual.data as { id: string }).id)
+      if (errVigente)
+        return { error: "Error al actualizar el documento vigente anterior" }
+    }
+
+    // Insertar el nuevo documento
+    const { data: docData, error: docError } = await admin
+      .from("contrato_documentos")
+      .insert({
+        contrato_id: contratoId,
+        tipo_documento: documentoMeta.tipo_documento,
+        numero_documento: documentoMeta.numero_documento.trim(),
+        fecha_otorgamiento: fechaOtorg,
+        archivo_url: archivoUrl,
+        resumen_cambios: documentoMeta.resumen_cambios?.trim() ?? null,
+        campos_afectados: JSON.stringify(camposAfectados),
+        es_vigente: true,
+        numero_version: nuevoNumeroVersion,
+        created_by: usuario.id,
+      })
+      .select("id")
+      .single()
+
+    if (docError) return { error: mensajeError(docError) }
+    const documentoId = (docData as { id: string }).id
+
+    // Actualizar el contrato con los nuevos valores del documento
+    const filaContrato = prepararContrato(datos)
+    const { error: errorActualizacion } = await admin.rpc(
+      "actualizar_contrato_completo",
+      {
+        p_id: contratoId,
+        p_datos: filaContrato,
+        p_sede_ids: datos.sede_ids,
+        p_programa_ids: datos.tiene_programas ? datos.programa_ids : [],
+        p_valores: datos.valores,
+      }
+    )
+
+    if (errorActualizacion) {
+      return {
+        error: mensajeError({
+          message: errorActualizacion.message,
+          code: errorActualizacion.code,
+        }),
+      }
+    }
+
+    revalidatePath(CONTRATOS_PATH, "layout")
+    revalidatePath(`/contratos/${contratoId}`, "layout")
+    return { success: true, documentoId }
+  } catch (e: any) {
+    return { error: e?.message ?? "Error al crear el documento" }
+  }
 }

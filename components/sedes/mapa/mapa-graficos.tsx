@@ -23,7 +23,7 @@ import {
   formatoNumero,
   formatoPct,
   type SedeMapa,
-} from "@/lib/sedes/ocupacion"
+} from "@/lib/sedes/ocupacion-utils"
 
 function TooltipDonut({ active, payload }: TooltipContentProps) {
   if (!active || !payload?.length) return null

@@ -34,7 +34,7 @@ export default function GrupoServicioDetallePage({
   params: Promise<{ id: string }>
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href="/configuracion/grupos-servicio"
         className={cn(

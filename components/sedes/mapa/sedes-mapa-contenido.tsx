@@ -2,11 +2,11 @@ import { requireAlcancePlaneacion } from "@/lib/auth/session"
 import {
   listSedesMapa,
   opcionesMapa,
-  resumenMapa,
   type MapaFiltros,
   type OpcionesMapa,
   type SedeMapa,
 } from "@/lib/sedes/ocupacion"
+import { resumenMapa } from "@/lib/sedes/ocupacion-utils"
 
 import {
   TarjetaOcupacionGlobal,

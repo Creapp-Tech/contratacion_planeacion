@@ -129,7 +129,7 @@ export function GrupoHerramientas({ grupos }: { grupos: GrupoArea[] }) {
         Nuevo grupo
       </DialogTrigger>
 
-      <DialogContent className="data-[size=default]:max-w-md">
+      <DialogContent className="data-[size=default]:">
         <DialogHeader>
           <DialogTitle>Grupos de áreas</DialogTitle>
           <DialogDescription>

@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatoNumero } from "@/lib/sedes/ocupacion"
+import { formatoNumero } from "@/lib/sedes/ocupacion-utils"
 import {
   resumenPoblaciones,
   type PoblacionFila,

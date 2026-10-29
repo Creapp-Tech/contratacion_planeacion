@@ -28,7 +28,6 @@ const CAMPOS_CONTRATO = `
   created_at,
   aseguradores_eps(nombre_eps),
   regionales(nombre),
-  responsable:usuarios!contratos_responsable_id_fkey(nombre_completo),
   categoria_contrato:catalogos_opciones!contratos_categoria_contrato_id_fkey(nombre),
   tipo_contrato:catalogos_opciones!contratos_tipo_contrato_id_fkey(nombre),
   estado_legalizacion:catalogos_opciones!contratos_estado_legalizacion_id_fkey(nombre),
@@ -88,7 +87,7 @@ export type ContratoRow = {
   created_at: string
   aseguradores_eps: { nombre_eps: string } | null
   regionales: { nombre: string } | null
-  responsable: { nombre_completo: string } | null
+  responsable: { nombre: string } | null
   categoria_contrato: { nombre: string } | null
   tipo_contrato: { nombre: string } | null
   estado_legalizacion: { nombre: string } | null
@@ -152,8 +151,7 @@ export type RegionalOpcion = {
 
 export type ResponsableOpcion = {
   id: string
-  nombre_completo: string
-  regional_id: string | null
+  nombre: string
 }
 
 export type CatalogoOpcion = {
@@ -171,6 +169,23 @@ export type SedeOpcion = {
   nombre: string
   regional: string | null
   municipio: string | null
+}
+
+export type ContratoDocumentoRow = {
+  id: string
+  contrato_id: string
+  tipo_documento: 'primigenio' | 'modificatorio' | 'otro_si' | 'anexo'
+  numero_documento: string
+  fecha_otorgamiento: string
+  fecha_publicacion: string | null
+  archivo_url: string
+  resumen_cambios: string | null
+  campos_afectados: string[] // JSON array of field names
+  es_vigente: boolean
+  numero_version: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type OpcionesContrato = {
@@ -205,7 +220,11 @@ export async function getContrato(
   const { data, error } = await query.maybeSingle()
 
   if (error) throw error
-  return (data as unknown as ContratoDetalle) ?? null
+  if (!data) return null
+
+  const detalle = data as unknown as ContratoDetalle
+  const nombres = await obtenerNombresResponsables([detalle.responsable_id])
+  return conNombreResponsable(detalle, nombres)
 }
 
 export const OPCIONES_CONTRATO_VACIAS: OpcionesContrato = {
@@ -223,6 +242,34 @@ export const OPCIONES_CONTRATO_VACIAS: OpcionesContrato = {
 
 function limpiarBusqueda(value: string) {
   return value.replace(/[%,()]/g, " ").trim()
+}
+
+async function obtenerNombresResponsables(
+  ids: (string | null)[]
+): Promise<Map<string, string>> {
+  const unicos = [...new Set(ids.filter(esUuid))]
+  if (unicos.length === 0) return new Map()
+
+  const { data, error } = await createAdminClient()
+    .from("catalogos_opciones")
+    .select("id, nombre")
+    .eq("dominio", "responsable")
+    .in("id", unicos)
+
+  if (error) throw error
+
+  return new Map(
+    ((data ?? []) as { id: string; nombre: string }[]).map((item) => [
+      item.id,
+      item.nombre,
+    ])
+  )
+}
+
+function conNombreResponsable<T extends ContratoRow>(fila: T, nombres: Map<string, string>): T {
+  if (!fila.responsable_id) return { ...fila, responsable: null }
+  const nombre = nombres.get(fila.responsable_id)
+  return { ...fila, responsable: nombre ? { nombre } : null }
 }
 
 async function obtenerEstadoEnEjecucionId(): Promise<string> {
@@ -289,7 +336,12 @@ export async function listContratos(
   const { data, error } = await query.order("nombre", { ascending: true })
 
   if (error) throw error
-  return (data ?? []) as unknown as ContratoRow[]
+
+  const filas = (data ?? []) as unknown as ContratoRow[]
+  const nombres = await obtenerNombresResponsables(
+    filas.map((fila) => fila.responsable_id)
+  )
+  return filas.map((fila) => conNombreResponsable(fila, nombres))
 }
 
 export async function listOpcionesContrato(
@@ -319,11 +371,11 @@ export async function listOpcionesContrato(
       .select("id, nombre")
       .order("nombre", { ascending: true }),
     admin
-      .from("usuarios")
-      .select("id, nombre_completo, regional_id")
-      .eq("rol", "gerente_regional")
-      .eq("estado", "activo")
-      .order("nombre_completo", { ascending: true }),
+      .from("catalogos_opciones")
+      .select("id, nombre, descripcion")
+      .eq("dominio", "responsable")
+      .eq("activo", true)
+      .order("nombre", { ascending: true }),
     admin
       .from("catalogos_opciones")
       .select("id, nombre")
@@ -378,7 +430,7 @@ export async function listOpcionesContrato(
 
   const aseguradores = (aseguradoresResult.data ?? []) as AseguradorOpcion[]
   let regionales = (regionalesResult.data ?? []) as RegionalOpcion[]
-  let responsables = (responsablesResult.data ?? []) as ResponsableOpcion[]
+  const responsables = (responsablesResult.data ?? []) as ResponsableOpcion[]
   const categoriasData = (categorias.data ?? []) as CatalogoOpcion[]
   const tiposContratoData = (tiposContrato.data ?? []) as CatalogoOpcion[]
   const estadosLegalizacionData = (estadosLegalizacion.data ??
@@ -395,10 +447,6 @@ export async function listOpcionesContrato(
 
     regionales = regionales.filter(
       (regional) => regional.id === alcance.regionalId
-    )
-
-    responsables = responsables.filter(
-      (responsable) => responsable.regional_id === alcance.regionalId
     )
 
     const regionalNombre = regionales[0]?.nombre?.trim().toLowerCase() ?? null
@@ -421,4 +469,33 @@ export async function listOpcionesContrato(
     regimenes: regimenesData,
     sedes: sedesData,
   }
+}
+
+export async function listDocumentosContrato(
+  contratoId: string
+): Promise<ContratoDocumentoRow[]> {
+  if (!esUuid(contratoId)) return []
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("contrato_documentos")
+    .select("*")
+    .eq("contrato_id", contratoId)
+    .order("numero_version", { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as ContratoDocumentoRow[]
+}
+
+export async function getDocumentoVigente(
+  contratoId: string
+): Promise<ContratoDocumentoRow | null> {
+  if (!esUuid(contratoId)) return null
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("contrato_documentos")
+    .select("*")
+    .eq("contrato_id", contratoId)
+    .eq("es_vigente", true)
+    .maybeSingle()
+  if (error) throw error
+  return (data ?? null) as unknown as ContratoDocumentoRow | null
 }

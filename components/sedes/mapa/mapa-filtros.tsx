@@ -13,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { MapaFiltros, OpcionesMapa } from "@/lib/sedes/ocupacion"
-import { createAdminClient } from "@/lib/supabase/admin"
+import type { MapaFiltros, OpcionesMapa } from "@/lib/sedes/ocupacion-utils"
+import { obtenerMunicipiosPorDepartamento } from "@/app/(dashboard)/sedes/mapa/actions"
 
 const ALL = "__all__"
 
@@ -142,18 +142,22 @@ export function MapaFiltros({
   useEffect(() => {
     async function cargarMunicipios() {
       if (departamento) {
-        const { data, error } = await createAdminClient()
-          .from("sedes")
-          .select("municipio")
-          .eq("departamento", departamento)
-
-        if (error) throw error
-        const municipios = [...new Set((data ?? []).map((f) => f.municipio).filter(Boolean) as string[])].
-          sort((a, b) => a.localeCompare(b))
-        setMunicipioOptions(
-          municipios.map((m) => ({ value: m as string, label: m as string }))
-        )
-        setMunicipio(undefined)
+        try {
+          const result = await obtenerMunicipiosPorDepartamento(departamento)
+          if (result.ok) {
+            const municipios = [...new Set((result.data ?? []).filter(Boolean) as string[])].sort(
+              (a, b) => a.localeCompare(b)
+            )
+            setMunicipioOptions(
+              municipios.map((m) => ({ value: m as string, label: m as string }))
+            )
+          } else {
+            setMunicipioOptions([])
+          }
+          setMunicipio(undefined)
+        } catch (e) {
+          setMunicipioOptions([])
+        }
       } else {
         setMunicipioOptions(
           municipioOptionsRaw.filter((o) => o.value !== ALL).map((o) => ({ value: o.value, label: o.label }))

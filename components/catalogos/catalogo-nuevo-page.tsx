@@ -24,7 +24,7 @@ export function CatalogoNuevoPage({ dominio }: { dominio: CatalogoDominio }) {
   const config = CATALOGOS[dominio]
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href={config.ruta}
         className={cn(

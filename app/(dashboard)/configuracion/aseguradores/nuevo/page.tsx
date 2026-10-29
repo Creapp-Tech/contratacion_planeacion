@@ -25,7 +25,7 @@ function FormSkeleton() {
 
 export default function NuevoAseguradorPage() {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href="/configuracion/aseguradores"
         className={cn(

@@ -19,7 +19,7 @@ import type {
   OpcionesPoblacion,
   PoblacionTipo,
 } from "@/lib/capacidad/agregaciones"
-import { listMunicipiosByDepartamento } from "@/lib/sedes/queries"
+import { obtenerMunicipiosPorDepartamento } from "@/app/(dashboard)/capacidad-instalada/municipios-actions"
 
 const ALL = "__all__"
 const PARAM = {
@@ -97,10 +97,13 @@ export function PobFiltros({
   useEffect(() => {
     async function cargarMunicipios() {
       if (departamento) {
-        const municipios = await listMunicipiosByDepartamento(departamento)
-        setMunicipioOptions(
-          municipios.map((m) => ({ value: m, label: m }))
-        )
+        try {
+          const result = await obtenerMunicipiosPorDepartamento(departamento)
+          const municipios = result.ok ? result.data ?? [] : []
+          setMunicipioOptions(municipios.map((m) => ({ value: m, label: m })))
+        } catch (e) {
+          setMunicipioOptions([])
+        }
         setMunicipio(undefined)
       } else {
         setMunicipioOptions(

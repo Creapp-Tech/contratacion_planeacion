@@ -25,7 +25,7 @@ function FormSkeleton() {
 
 export default function NuevaFrecuenciaPage() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href="/frecuencias"
         className={cn(

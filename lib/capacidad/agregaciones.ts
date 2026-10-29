@@ -2,7 +2,7 @@ import {
   calcularOcupacion,
   formatoNumero,
   formatoPct,
-} from "@/lib/sedes/ocupacion"
+} from "@/lib/sedes/ocupacion-utils"
 import type { FrecuenciaAreaCruda, SedeInfraCruda, SedePoblacionCruda } from "./queries"
 
 export { calcularOcupacion, formatoNumero, formatoPct }

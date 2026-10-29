@@ -152,7 +152,7 @@ export function IpcAnalisis({
                 <TableBody>
                   {aseguradores.map((fila) => (
                     <TableRow key={fila.nombre}>
-                      <TableCell className="max-w-44 truncate font-medium">
+                      <TableCell className=" truncate font-medium">
                         {fila.nombre}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">

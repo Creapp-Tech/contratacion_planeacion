@@ -98,7 +98,12 @@ export async function eliminarCatalogo(
     .eq("id", id)
     .eq("dominio", dominio)
 
-  if (error) return { error: error.message }
+  if (error) {
+    if (error.code === "23503" || error.code === "23502") {
+      return { error: "No se puede eliminar: el registro está en uso" }
+    }
+    return { error: error.message }
+  }
 
   revalidatePath(CATALOGOS[dominio].ruta)
   return { success: true }

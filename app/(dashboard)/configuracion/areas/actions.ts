@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoPlaneacion } from "@/lib/auth/session"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { areaSchema, type AreaInput } from "@/lib/validations/area"
 import {
@@ -22,7 +22,7 @@ function mensajeError(error: { code?: string; message: string }) {
 }
 
 export async function crearArea(input: AreaInput): Promise<AreaActionResult> {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const parsed = areaSchema.safeParse(input)
   if (!parsed.success) {
@@ -43,7 +43,7 @@ export async function actualizarArea(
   id: string,
   input: AreaInput
 ): Promise<AreaActionResult> {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const parsed = areaSchema.safeParse(input)
   if (!parsed.success) {
@@ -62,7 +62,7 @@ export async function actualizarArea(
 }
 
 export async function eliminarArea(id: string): Promise<AreaActionResult> {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const { error } = await createAdminClient()
     .from("areas_catalogo")
@@ -91,7 +91,7 @@ function revalidarAreas() {
 export async function crearGrupoArea(
   input: GrupoAreaInput
 ): Promise<GrupoAreaActionResult> {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const parsed = grupoAreaSchema.safeParse(input)
   if (!parsed.success) {
@@ -112,7 +112,7 @@ export async function renombrarGrupoArea(
   id: string,
   nombre: string
 ): Promise<GrupoAreaActionResult> {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const parsed = grupoAreaSchema.safeParse({ nombre })
   if (!parsed.success) {
@@ -156,7 +156,7 @@ export async function cambiarEstadoGrupoArea(
   id: string,
   activo: boolean
 ): Promise<GrupoAreaActionResult> {
-  await requireSuperadmin()
+  await requireAccesoPlaneacion()
 
   const { error } = await createAdminClient()
     .from("area_categorias")

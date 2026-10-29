@@ -19,7 +19,7 @@ import type {
   OpcionesFiltrosFrecuencias,
 } from "@/lib/frecuencias/queries"
 import { TIPOS_FRECUENCIA } from "@/lib/frecuencias/tipos"
-import { listMunicipiosByDepartamento } from "@/lib/sedes/queries"
+import { obtenerMunicipiosPorDepartamento } from "@/app/(dashboard)/frecuencias/municipios-actions"
 
 const ALL = "__all__"
 
@@ -100,10 +100,13 @@ export function FrecuenciaFiltros({
   useEffect(() => {
     async function cargarMunicipios() {
       if (departamento) {
-        const municipios = await listMunicipiosByDepartamento(departamento)
-        setMunicipioOptions(
-          municipios.map((m) => ({ value: m, label: m }))
-        )
+        try {
+          const result = await obtenerMunicipiosPorDepartamento(departamento)
+          const municipios = result.ok ? result.data ?? [] : []
+          setMunicipioOptions(municipios.map((m) => ({ value: m, label: m })))
+        } catch (e) {
+          setMunicipioOptions([])
+        }
         setMunicipio(undefined)
       } else {
         setMunicipioOptions(

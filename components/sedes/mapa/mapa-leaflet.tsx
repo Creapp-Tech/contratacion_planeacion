@@ -9,7 +9,7 @@ import {
   formatoNumero,
   formatoPct,
   type SedeMapa,
-} from "@/lib/sedes/ocupacion"
+} from "@/lib/sedes/ocupacion-utils"
 
 const CENTRO_COLOMBIA: L.LatLngTuple = [4.5701, -74.2973]
 const ZOOM_INICIAL = 6

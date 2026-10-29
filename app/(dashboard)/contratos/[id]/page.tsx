@@ -9,6 +9,8 @@ import { DuplicarContratoBoton } from "@/components/contratos/duplicar-contrato"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
+export const instant = false
+
 export const metadata: Metadata = {
   title: "Detalle de contrato",
 }

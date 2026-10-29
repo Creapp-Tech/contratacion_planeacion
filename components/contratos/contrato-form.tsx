@@ -16,6 +16,7 @@ import { cn } from "cn"
 import {
   actualizarContrato,
   crearContrato,
+  crearDocumentoContrato,
 } from "@/app/(dashboard)/contratos/actions"
 import { ChoiceChips } from "@/components/shared/choice-chips"
 import { MultiSelectChips } from "@/components/shared/multi-select-chips"
@@ -70,10 +71,11 @@ import {
 } from "@/lib/validations/contrato"
 
 type ContratoFormProps = {
-  mode: "crear" | "editar" | "ver"
+  mode: "crear" | "editar" | "ver" | "crear_documento"
   contrato?: ContratoDetalle
   opciones: OpcionesContrato
   volverA?: string
+  contratoId?: string
 }
 
 const REGIMEN_TOTAL = "__total__"
@@ -95,6 +97,7 @@ export function ContratoForm({
   contrato,
   opciones,
   volverA = "/contratos",
+  contratoId,
 }: ContratoFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -102,6 +105,7 @@ export function ContratoForm({
     (contrato?.valores.length ?? 0) > 0
   )
   const readonly = mode === "ver"
+  const esDocumento = mode === "crear_documento"
 
   const aseguradoresItems = opcionesItems(
     opciones.aseguradores.map((asegurador) => ({
@@ -156,7 +160,6 @@ export function ContratoForm({
     control,
     register,
     handleSubmit,
-    getValues,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<ContratoInput>({
@@ -196,6 +199,12 @@ export function ContratoForm({
         })) ?? [],
       url_ubicacion: contrato?.url_ubicacion ?? null,
       notas: contrato?.notas ?? null,
+      tipo_documento: null,
+      numero_documento: null,
+      fecha_otorgamiento: null,
+      archivo_url: null,
+      resumen_cambios: null,
+      contrato_id: contrato?.id ?? null,
     },
   })
 
@@ -215,17 +224,12 @@ export function ContratoForm({
   const tieneProgramas = useWatch({ control, name: "tiene_programas" })
   const valores = useWatch({ control, name: "valores" })
 
-  const responsablesDisponibles = useMemo(() => {
-    if (!regionalId) return []
-    return opciones.responsables.filter(
-      (responsable) => responsable.regional_id === regionalId
-    )
-  }, [opciones.responsables, regionalId])
+  const responsablesDisponibles = opciones.responsables
 
   const responsablesItems = opcionesItems(
     responsablesDisponibles.map((responsable) => ({
       id: responsable.id,
-      label: responsable.nombre_completo,
+      label: responsable.nombre,
     }))
   )
 
@@ -283,10 +287,21 @@ export function ContratoForm({
       valores: discriminarValores ? values.valores : [],
     }
 
-    const result =
-      mode === "editar" && contrato
-        ? await actualizarContrato(contrato.id, normalizado)
-        : await crearContrato(normalizado)
+    let result: any = null
+    if (esDocumento && contratoId) {
+      const meta = {
+        tipo_documento: normalizado.tipo_documento as any,
+        numero_documento: normalizado.numero_documento ?? "",
+        fecha_otorgamiento: normalizado.fecha_otorgamiento ?? null,
+        archivo_url: normalizado.archivo_url ?? "",
+        resumen_cambios: normalizado.resumen_cambios ?? null,
+      }
+      result = await crearDocumentoContrato(contratoId, normalizado, meta)
+    } else if (mode === "editar" && contrato) {
+      result = await actualizarContrato(contrato.id, normalizado)
+    } else {
+      result = await crearContrato(normalizado)
+    }
 
     if ("error" in result) {
       setServerError(result.error)
@@ -481,16 +496,6 @@ export function ContratoForm({
                       value={field.value}
                       onValueChange={(value) => {
                         field.onChange(value)
-                        const responsableId = getValues("responsable_id")
-                        const responsable = opciones.responsables.find(
-                          (item) => item.id === responsableId
-                        )
-                        if (
-                          responsable &&
-                          responsable.regional_id !== value
-                        ) {
-                          setValue("responsable_id", "")
-                        }
                         setValue("sede_ids", [])
                       }}
                       items={regionalesItems}
@@ -530,7 +535,7 @@ export function ContratoForm({
             </div>
 
             <Field data-invalid={!!errors.responsable_id}>
-              <FieldLabel>Responsable (gerente regional)</FieldLabel>
+              <FieldLabel>Responsable</FieldLabel>
               <Controller
                 control={control}
                 name="responsable_id"
@@ -556,7 +561,7 @@ export function ContratoForm({
                           key={responsable.id}
                           value={responsable.id}
                         >
-                          {responsable.nombre_completo}
+                          {responsable.nombre}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -729,9 +734,6 @@ export function ContratoForm({
             </Field>
 
             <Field orientation="horizontal">
-              <FieldLabel htmlFor="prorroga_automatica">
-                Cuenta con prórroga automática
-              </FieldLabel>
               <Controller
                 control={control}
                 name="prorroga_automatica"
@@ -744,18 +746,21 @@ export function ContratoForm({
                   />
                 )}
               />
+              <FieldLabel htmlFor="prorroga_automatica">
+                Cuenta con prórroga automática
+              </FieldLabel>
             </Field>
 
             <Field orientation="horizontal">
-              <FieldLabel htmlFor="discriminar_valores">
-                Discriminar valores por régimen
-              </FieldLabel>
               <Switch
                 id="discriminar_valores"
                 checked={discriminarValores}
                 onCheckedChange={setDiscriminarValores}
                 disabled={readonly}
               />
+              <FieldLabel htmlFor="discriminar_valores">
+                Discriminar valores por régimen
+              </FieldLabel>
             </Field>
 
             {discriminarValores ? (
@@ -1065,9 +1070,110 @@ export function ContratoForm({
         </CardContent>
       </Card>
 
+      {esDocumento ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading">Documento modificatorio / Otrosí / Anexo</CardTitle>
+            <CardDescription>
+              Datos del documento que modifica el contrato vigente (URL de OneDrive, número y comentario).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field data-invalid={!!errors.tipo_documento}>
+                <FieldLabel>Tipo de documento</FieldLabel>
+                <Controller
+                  control={control}
+                  name="tipo_documento"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      items={{
+                        primigenio: "Primigenio",
+                        modificatorio: "Modificatorio",
+                        otro_si: "Otro sí",
+                        anexo: "Anexo",
+                      }}
+                      disabled={readonly}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona el tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="primigenio">Primigenio</SelectItem>
+                        <SelectItem value="modificatorio">Modificatorio</SelectItem>
+                        <SelectItem value="otro_si">Otro sí</SelectItem>
+                        <SelectItem value="anexo">Anexo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldError errors={[errors.tipo_documento]} />
+              </Field>
+
+              <Field data-invalid={!!errors.numero_documento}>
+                <FieldLabel htmlFor="numero_documento">Número del documento</FieldLabel>
+                <Input
+                  id="numero_documento"
+                  autoComplete="off"
+                  disabled={readonly}
+                  aria-invalid={!!errors.numero_documento}
+                  {...register("numero_documento")}
+                  placeholder="Ej. MOD-001"
+                />
+                <FieldError errors={[errors.numero_documento]} />
+              </Field>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field data-invalid={!!errors.fecha_otorgamiento}>
+                <FieldLabel htmlFor="fecha_otorgamiento">Fecha de otorgamiento</FieldLabel>
+                <Input
+                  id="fecha_otorgamiento"
+                  type="date"
+                  disabled={readonly}
+                  aria-invalid={!!errors.fecha_otorgamiento}
+                  {...register("fecha_otorgamiento", {
+                    setValueAs: (value: string) => (value === "" ? null : value),
+                  })}
+                />
+                <FieldError errors={[errors.fecha_otorgamiento]} />
+              </Field>
+
+              <Field data-invalid={!!errors.archivo_url}>
+                <FieldLabel htmlFor="archivo_url">URL del archivo (OneDrive pública)</FieldLabel>
+                <Input
+                  id="archivo_url"
+                  type="url"
+                  disabled={readonly}
+                  aria-invalid={!!errors.archivo_url}
+                  {...register("archivo_url")}
+                  placeholder="https://onedrive.live.com/..."
+                />
+                <FieldError errors={[errors.archivo_url]} />
+              </Field>
+            </div>
+
+            <Field data-invalid={!!errors.resumen_cambios}>
+              <FieldLabel htmlFor="resumen_cambios">Comentario / Resumen de cambios</FieldLabel>
+              <Textarea
+                id="resumen_cambios"
+                rows={3}
+                disabled={readonly}
+                aria-invalid={!!errors.resumen_cambios}
+                {...register("resumen_cambios")}
+                placeholder="Ej. Cambio de valor a 6500, actualización de fechas..."
+              />
+              <FieldError errors={[errors.resumen_cambios]} />
+            </Field>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="flex justify-end gap-2">
         <Link
-          href="/contratos"
+          href={volverA}
           className={cn(buttonVariants({ variant: "outline" }))}
         >
           Volver
@@ -1075,7 +1181,7 @@ export function ContratoForm({
         {mode !== "ver" ? (
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? <Loader2Icon className="animate-spin" /> : null}
-            {mode === "crear" ? "Crear contrato" : "Guardar cambios"}
+            {esDocumento ? "Guardar documento" : mode === "crear" ? "Crear contrato" : "Guardar cambios"}
           </Button>
         ) : null}
       </div>
