@@ -122,3 +122,80 @@ export function formatearMoneda(value: number | null): string {
     maximumFractionDigits: 2,
   }).format(value)
 }
+
+export function formatearFecha(value: string | null): string {
+  if (!value) return "—"
+  const partes = value.split("-")
+  if (partes.length !== 3) return value
+  const fecha = new Date(
+    Number(partes[0]),
+    Number(partes[1]) - 1,
+    Number(partes[2])
+  )
+  if (Number.isNaN(fecha.getTime())) return value
+  return new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" }).format(fecha)
+}
+
+// Días antes de la fecha de fin en los que un contrato se considera
+// "Próximo a vencer" en el listado.
+export const DIAS_PROXIMO_VENCER = 75
+
+export type EstadoVigencia =
+  | "vigente"
+  | "proximo_vencer"
+  | "vencido"
+  | "sin_fecha"
+
+// Filtro aplicable desde las tarjetas de resumen. "sin_fecha" no se ofrece
+// como filtro porque agrupa contratos sin fecha de fin registrada.
+export type FiltroVigencia =
+  | "todos"
+  | "vigente"
+  | "proximo_vencer"
+  | "vencido"
+
+export type VigenciaContrato = {
+  estado: EstadoVigencia
+  etiqueta: string
+  diasRestantes: number | null
+}
+
+export function calcularVigencia(
+  fechaFin: string | null,
+  hoy: Date = new Date()
+): VigenciaContrato {
+  if (!fechaFin) {
+    return { estado: "sin_fecha", etiqueta: "Sin fecha", diasRestantes: null }
+  }
+
+  const partes = fechaFin.split("-")
+  const fin =
+    partes.length === 3
+      ? new Date(
+          Number(partes[0]),
+          Number(partes[1]) - 1,
+          Number(partes[2])
+        )
+      : new Date(fechaFin)
+
+  if (Number.isNaN(fin.getTime())) {
+    return { estado: "sin_fecha", etiqueta: "Sin fecha", diasRestantes: null }
+  }
+
+  const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+  const diasRestantes = Math.round(
+    (fin.getTime() - inicioDia.getTime()) / 86_400_000
+  )
+
+  if (diasRestantes < 0) {
+    return { estado: "vencido", etiqueta: "Vencido", diasRestantes }
+  }
+  if (diasRestantes <= DIAS_PROXIMO_VENCER) {
+    return {
+      estado: "proximo_vencer",
+      etiqueta: "Próximo a vencer",
+      diasRestantes,
+    }
+  }
+  return { estado: "vigente", etiqueta: "Vigente", diasRestantes }
+}

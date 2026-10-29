@@ -2,6 +2,7 @@ import {
   alcanceContratos,
   requireAccesoContratacion,
 } from "@/lib/auth/session"
+import type { FiltroVigencia } from "@/lib/contratos/constantes"
 import {
   OPCIONES_CONTRATO_VACIAS,
   listContratos,
@@ -14,9 +15,18 @@ import {
 
 import { ContratoFiltros as ContratoFiltrosBar } from "./contrato-filtros"
 import { ContratosTabla } from "./contratos-tabla"
+import { ResumenContratos } from "./resumen-contratos"
 
 function pick(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined
+}
+
+function pickVigencia(value: string | string[] | undefined): FiltroVigencia {
+  return value === "vigente" ||
+    value === "proximo_vencer" ||
+    value === "vencido"
+    ? value
+    : "todos"
 }
 
 export async function ContratosContenido({
@@ -29,6 +39,7 @@ export async function ContratosContenido({
   const usuario = await requireAccesoContratacion()
   const alcance = alcanceContratos(usuario)
   const params = await searchParams
+  const vigencia = pickVigencia(params.vigencia)
 
   const filtros: ContratoFiltros = {
     q: pick(params.q),
@@ -59,6 +70,8 @@ export async function ContratosContenido({
 
   return (
     <div className="flex flex-col gap-4">
+      <ResumenContratos contratos={contratos} vigencia={vigencia} />
+
       <ContratoFiltrosBar
         opciones={opciones}
         filtros={{
@@ -77,6 +90,7 @@ export async function ContratosContenido({
 
       <ContratosTabla
         contratos={contratos}
+        vigencia={vigencia}
         mensajeVacio={
           vista === "historial"
             ? "No hay contratos en el historial."
@@ -86,7 +100,8 @@ export async function ContratosContenido({
         filtrado={Boolean(
           filtros.q ||
             filtros.asegurador ||
-            (alcance.verTodo && filtros.regional)
+            (alcance.verTodo && filtros.regional) ||
+            vigencia !== "todos"
         )}
       />
     </div>
