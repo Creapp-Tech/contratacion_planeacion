@@ -13,6 +13,7 @@ export function MultiSelect({
   onChange,
   placeholderTodas,
   placeholderNinguna,
+  mensajeVacio = "Sin opciones disponibles.",
   className,
 }: {
   id: string
@@ -21,6 +22,7 @@ export function MultiSelect({
   onChange: (ids: string[]) => void
   placeholderTodas: string
   placeholderNinguna: string
+  mensajeVacio?: string
   className?: string
 }) {
   const [abierto, setAbierto] = useState(false)
@@ -80,7 +82,7 @@ export function MultiSelect({
         >
           {opciones.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              Sin áreas disponibles.
+              {mensajeVacio}
             </p>
           ) : (
             opciones.map((opcion) => {

@@ -47,8 +47,7 @@ export const contratoSchema = z
     ciudad: z
       .string()
       .trim()
-      .min(1, "Ingresa la ciudad")
-      .max(120, "La ciudad es demasiado larga"),
+      .min(1, "Ingresa la ciudad"),
     modalidad: z.enum(MODALIDAD_VALUES, {
       error: "Selecciona una modalidad válida",
     }),

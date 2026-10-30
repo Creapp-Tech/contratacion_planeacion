@@ -2,6 +2,7 @@ import { mismaRegional, requireAlcancePlaneacion } from "@/lib/auth/session"
 import {
   aplanarPoblacion,
   AREAS_NINGUNA,
+  SEDES_NINGUNA,
   opcionesInfra,
   opcionesPoblacion,
   type CategoriaOcupacion,
@@ -30,6 +31,17 @@ function parseAreas(value: string | undefined): string[] | undefined {
   return value.split(",").filter((id) => id.length > 0)
 }
 
+function parseLista(value: string | undefined): string[] | undefined {
+  if (!value) return undefined
+  const valores = value.split(",").filter((item) => item.length > 0)
+  return valores.length > 0 ? valores : undefined
+}
+
+function parseSedes(value: string | undefined): string[] | undefined {
+  if (value === SEDES_NINGUNA) return []
+  return parseLista(value)
+}
+
 function parseCategoria(value: string | undefined): CategoriaOcupacion | undefined {
   return value === "sin" || value === "cerca" || value === "disp"
     ? value
@@ -55,7 +67,7 @@ export async function CapacidadContenido({
 
     const filtros: FiltrosPoblacion = {
       regional: pick(params.p_regional),
-      sede: pick(params.p_sede),
+      sedes: parseSedes(pick(params.p_sede)),
       eps: pick(params.p_eps),
       capacidad: pick(params.p_cap) === "inicial" ? "inicial" : "actual",
       poblacion:

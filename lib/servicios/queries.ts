@@ -7,6 +7,7 @@ export type ServicioRow = {
   duracion_minutos: number | null
   area_id: string | null
   tipo_personal: string
+  orden: number | null
   activo: boolean
   created_at: string
   updated_at: string
@@ -32,6 +33,7 @@ export type Servicio = {
   area_nombre: string | null
   area_categoria: string | null
   tipo_personal: string
+  orden: number | null
   activo: boolean
   created_at: string
 }
@@ -39,12 +41,30 @@ export type Servicio = {
 export type GrupoServicio = {
   id: string
   nombre: string
+  orden: number
 }
 
 export type GrupoServicioAdmin = GrupoServicio & {
   activo: boolean
   created_at: string
   servicios_count: number
+}
+
+export type ServicioPlaneacion = {
+  id: string
+  nombre: string
+  grupo_id: string | null
+  duracion_minutos: number | null
+  area_id: string | null
+  tipo_personal: string
+  orden: number
+}
+
+export type GrupoServicioConServicios = {
+  id: string
+  nombre: string
+  orden: number
+  servicios: ServicioPlaneacion[]
 }
 
 export function etiquetaServicio(
@@ -65,13 +85,14 @@ function mapearServicio(fila: ServicioAnidado): Servicio {
     area_nombre: fila.areas_catalogo?.nombre ?? null,
     area_categoria: fila.areas_catalogo?.categoria ?? null,
     tipo_personal: fila.tipo_personal,
+    orden: fila.orden,
     activo: fila.activo,
     created_at: fila.created_at,
   }
 }
 
 const SELECT_SERVICIO =
-  "id, nombre, grupo_id, duracion_minutos, area_id, tipo_personal, activo, created_at, updated_at, areas_catalogo(nombre, categoria), grupos_servicio(nombre)"
+  "id, nombre, grupo_id, duracion_minutos, area_id, tipo_personal, orden, activo, created_at, updated_at, areas_catalogo(nombre, categoria), grupos_servicio(nombre)"
 
 export type ServicioFiltros = {
   q?: string
@@ -86,6 +107,7 @@ export async function listServicios(
   let query = createAdminClient()
     .from("servicios")
     .select(SELECT_SERVICIO)
+    .order("orden", { ascending: true })
     .order("nombre", { ascending: true })
 
   if (filtros.q) {
@@ -150,8 +172,9 @@ export async function listServiciosOpciones(): Promise<
 export async function listGruposServicio(): Promise<GrupoServicio[]> {
   const { data, error } = await createAdminClient()
     .from("grupos_servicio")
-    .select("id, nombre")
+    .select("id, nombre, orden")
     .eq("activo", true)
+    .order("orden", { ascending: true })
     .order("nombre", { ascending: true })
 
   if (error) throw error
@@ -162,6 +185,7 @@ export async function listGruposServicio(): Promise<GrupoServicio[]> {
 type GrupoServicioAdminRow = {
   id: string
   nombre: string
+  orden: number
   activo: boolean
   created_at: string
   servicios: { count: number }[]
@@ -172,7 +196,8 @@ export async function listGruposServicioAdmin(): Promise<
 > {
   const { data, error } = await createAdminClient()
     .from("grupos_servicio")
-    .select("id, nombre, activo, created_at, servicios(count)")
+    .select("id, nombre, orden, activo, created_at, servicios(count)")
+    .order("orden", { ascending: true })
     .order("nombre", { ascending: true })
 
   if (error) throw error
@@ -180,6 +205,7 @@ export async function listGruposServicioAdmin(): Promise<
   return ((data ?? []) as unknown as GrupoServicioAdminRow[]).map((fila) => ({
     id: fila.id,
     nombre: fila.nombre,
+    orden: fila.orden,
     activo: fila.activo,
     created_at: fila.created_at,
     servicios_count: fila.servicios?.[0]?.count ?? 0,
@@ -191,7 +217,7 @@ export async function getGrupoServicio(
 ): Promise<GrupoServicioAdmin | null> {
   const { data, error } = await createAdminClient()
     .from("grupos_servicio")
-    .select("id, nombre, activo, created_at, servicios(count)")
+    .select("id, nombre, orden, activo, created_at, servicios(count)")
     .eq("id", id)
     .maybeSingle()
 
@@ -202,8 +228,48 @@ export async function getGrupoServicio(
   return {
     id: fila.id,
     nombre: fila.nombre,
+    orden: fila.orden,
     activo: fila.activo,
     created_at: fila.created_at,
     servicios_count: fila.servicios?.[0]?.count ?? 0,
   }
+}
+
+export async function listServiciosAgrupados(): Promise<
+  GrupoServicioConServicios[]
+> {
+  const client = createAdminClient()
+
+  const [gruposRes, serviciosRes] = await Promise.all([
+    client
+      .from("grupos_servicio")
+      .select("id, nombre, orden")
+      .eq("activo", true)
+      .order("orden", { ascending: true })
+      .order("nombre", { ascending: true }),
+    client
+      .from("servicios")
+      .select("id, nombre, grupo_id, duracion_minutos, area_id, tipo_personal")
+      .eq("activo", true)
+      .order("nombre", { ascending: true }),
+  ])
+
+  if (gruposRes.error) throw gruposRes.error
+  if (serviciosRes.error) throw serviciosRes.error
+
+  const serviciosPorGrupo = new Map<string, ServicioPlaneacion[]>()
+
+  for (const servicio of (serviciosRes.data ?? []) as ServicioPlaneacion[]) {
+    if (!servicio.grupo_id) continue
+    const lista = serviciosPorGrupo.get(servicio.grupo_id) ?? []
+    lista.push(servicio)
+    serviciosPorGrupo.set(servicio.grupo_id, lista)
+  }
+
+  return ((gruposRes.data ?? []) as GrupoServicio[])
+    .map((grupo) => ({
+      ...grupo,
+      servicios: serviciosPorGrupo.get(grupo.id) ?? [],
+    }))
+    .filter((grupo) => grupo.servicios.length > 0)
 }

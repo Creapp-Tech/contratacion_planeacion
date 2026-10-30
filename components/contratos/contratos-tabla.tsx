@@ -42,7 +42,7 @@ const VARIANTE_VIGENCIA: Record<
 > = {
   vigente: "secondary",
   proximo_vencer: "destructive",
-  vencido: "outline",
+  vencido: "destructive",
   sin_fecha: "outline",
 }
 
@@ -94,8 +94,15 @@ export function ContratosTabla({
       accessor: "vigencia",
       render: (_value, row) => {
         const vigencia = calcularVigencia(row.fecha_fin)
+        // ClassNames personalizadas por estado: verde, naranja y rojo
+        const customClassName = {
+          vigente: "bg-green-500 text-white",
+          proximo_vencer: "bg-orange-500 text-white",
+          vencido: "bg-red-500 text-white",
+          sin_fecha: "bg-gray-500 text-white",
+        }[vigencia.estado]
         return (
-          <Badge variant={VARIANTE_VIGENCIA[vigencia.estado]}>
+          <Badge className={customClassName} variant="default">
             {vigencia.etiqueta}
           </Badge>
         )

@@ -79,12 +79,6 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ROLES_PLANEACION,
       },
       {
-        title: "Planeaciones",
-        href: "/planeaciones",
-        icon: FileText,
-        roles: ROLES_PLANEACION,
-      },
-      {
         title: "Frecuencias de uso",
         href: "/frecuencias",
         icon: Gauge,

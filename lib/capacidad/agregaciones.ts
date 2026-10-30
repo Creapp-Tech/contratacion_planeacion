@@ -8,6 +8,7 @@ import type { FrecuenciaAreaCruda, SedeInfraCruda, SedePoblacionCruda } from "./
 export { calcularOcupacion, formatoNumero, formatoPct }
 
 export const AREAS_NINGUNA = "__ninguna__"
+export const SEDES_NINGUNA = "__ninguna__"
 
 export type CapacidadTipo = "inicial" | "actual"
 export type PoblacionTipo = "activa" | "pagada" | "certificada"
@@ -37,7 +38,7 @@ export const ETIQUETAS_CATEGORIA: Record<
 
 export type FiltrosPoblacion = {
   regional?: string
-  sede?: string
+  sedes?: string[]
   eps?: string
   capacidad: CapacidadTipo
   poblacion: PoblacionTipo
@@ -208,7 +209,9 @@ export function filtrarPoblacion(
 ): SedePoblacion[] {
   return sedes
     .filter((sede) => !filtros.regional || sede.regional === filtros.regional)
-    .filter((sede) => !filtros.sede || sede.sedeId === filtros.sede)
+    .filter(
+      (sede) => !filtros.sedes || filtros.sedes.includes(sede.sedeId)
+    )
     .filter((sede) => !filtros.departamento || sede.departamento === filtros.departamento)
     .filter((sede) => !filtros.municipio || sede.municipio === filtros.municipio)
     .map((sede) => {

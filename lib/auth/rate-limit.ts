@@ -47,6 +47,11 @@ export function claveRateLimit(ip: string, identificador: string): string {
   return `${ip}:${identificador.trim().toLowerCase()}`
 }
 
+/**
+ * Verifica el límite de tasa actual.
+ * Usa Date.now() dentro de una función de servidor que se ejecuta
+ * en el momento de la petición, no durante el prerendering estático.
+ */
 export function verificarRateLimit(clave: string): RateLimitResult {
   const ahora = Date.now()
   limpiarExpirados(ahora)
@@ -68,6 +73,11 @@ export function verificarRateLimit(clave: string): RateLimitResult {
 }
 
 export function registrarIntentoFallido(clave: string): void {
+  /**
+   * Registra un intento fallido de login.
+   * Usa Date.now() dentro de una función de servidor que se ejecuta
+   * en el momento de la petición, no durante el prerendering estático.
+   */
   const ahora = Date.now()
   const registro = registros.get(clave)
 

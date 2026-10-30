@@ -1,6 +1,5 @@
 "use client"
 
-import { useParametrosBusqueda } from "../use-parametros"
 import { useState, useEffect } from "react"
 import { Loader2Icon, XIcon } from "lucide-react"
 
@@ -19,7 +18,11 @@ import type {
   OpcionesPoblacion,
   PoblacionTipo,
 } from "@/lib/capacidad/agregaciones"
+import { SEDES_NINGUNA } from "@/lib/capacidad/agregaciones"
 import { obtenerMunicipiosPorDepartamento } from "@/app/(dashboard)/capacidad-instalada/municipios-actions"
+
+import { MultiSelect } from "../multi-select"
+import { useParametrosBusqueda } from "../use-parametros"
 
 const ALL = "__all__"
 const PARAM = {
@@ -50,17 +53,14 @@ export function PobFiltros({
     (sede) => !filtros.regional || sede.regional === filtros.regional
   )
 
-  const sedeItems = Object.fromEntries([
-    [ALL, "Todas las sedes"],
-    ...sedesVisibles.map((sede) => [sede.id, sede.nombre]),
-  ])
+  const seleccionSedes = filtros.sedes
+    ? filtros.sedes.filter((id) =>
+        sedesVisibles.some((sede) => sede.id === id)
+      )
+    : sedesVisibles.map((sede) => sede.id)
   const regionalOptions = [
     { value: ALL, label: "Todas las regionales" },
     ...opciones.regionales.map((value) => ({ value, label: value })),
-  ]
-  const sedeOptions = [
-    { value: ALL, label: "Todas las sedes" },
-    ...sedesVisibles.map((sede) => ({ value: sede.id, label: sede.nombre })),
   ]
   const epsOptions = [
     { value: ALL, label: "Todas las EPS" },
@@ -119,7 +119,11 @@ export function PobFiltros({
   }, [departamento])
 
   const hayFiltros = Boolean(
-    filtros.regional || filtros.sede || filtros.eps || filtros.departamento || filtros.municipio
+    filtros.regional ||
+      filtros.sedes !== undefined ||
+      filtros.eps ||
+      filtros.departamento ||
+      filtros.municipio
   )
 
   return (
@@ -203,28 +207,26 @@ export function PobFiltros({
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="pob-sede" className="text-xs text-muted-foreground">
-          Sede
+          Sedes
         </Label>
-        <Select
-          value={filtros.sede ?? ALL}
-          onValueChange={(next) =>
+        <MultiSelect
+          id="pob-sede"
+          opciones={sedesVisibles}
+          seleccion={seleccionSedes}
+          onChange={(ids) =>
             actualizar({
-              [PARAM.sede]: next === ALL || next == null ? undefined : next,
+              [PARAM.sede]:
+                ids.length === 0
+                  ? SEDES_NINGUNA
+                  : ids.length === sedesVisibles.length
+                    ? undefined
+                    : ids.join(","),
             })
           }
-          items={sedeItems}
-        >
-          <SelectTrigger id="pob-sede" className="w-full sm:w-52">
-            <SelectValue placeholder="Sede" />
-          </SelectTrigger>
-          <SelectContent>
-            {sedeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholderTodas="Todas las sedes"
+          placeholderNinguna="Ninguna sede"
+          mensajeVacio="Sin sedes disponibles."
+        />
       </div>
 
       <div className="flex flex-col gap-1">

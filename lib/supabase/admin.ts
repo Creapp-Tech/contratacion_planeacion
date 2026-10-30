@@ -17,5 +17,11 @@ export function createAdminClient() {
       persistSession: false,
       autoRefreshToken: false,
     },
+    // Headers que pueden ayudar a forzar refresh del metadata en el cliente Supabase
+    global: {
+      headers: {
+        'Prefer': 'return=representation'
+      }
+    }
   })
 }
