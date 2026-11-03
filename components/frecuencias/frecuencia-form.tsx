@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select"
 import type { Frecuencia } from "@/lib/frecuencias/queries"
 import { TIPOS_FRECUENCIA, type TipoFrecuencia } from "@/lib/frecuencias/tipos"
+import { etiquetaServicio } from "@/lib/servicios/etiqueta"
 
 const formSchema = z.object({
   tipo_frecuencia: z.enum([
@@ -326,9 +327,7 @@ export function FrecuenciaForm({
                       items={toItems(
                         opciones.servicios.map((servicio) => ({
                           id: servicio.id,
-                          nombre: servicio.grupo
-                            ? `${servicio.nombre} (${servicio.grupo})`
-                            : servicio.nombre,
+                          nombre: etiquetaServicio(servicio.nombre, servicio.grupo),
                         }))
                       )}
                     >
@@ -341,9 +340,7 @@ export function FrecuenciaForm({
                       <SelectContent>
                         {opciones.servicios.map((servicio) => (
                           <SelectItem key={servicio.id} value={servicio.id}>
-                            {servicio.grupo
-                              ? `${servicio.nombre} (${servicio.grupo})`
-                              : servicio.nombre}
+                            {etiquetaServicio(servicio.nombre, servicio.grupo)}
                           </SelectItem>
                         ))}
                       </SelectContent>

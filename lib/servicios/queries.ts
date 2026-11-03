@@ -67,12 +67,7 @@ export type GrupoServicioConServicios = {
   servicios: ServicioPlaneacion[]
 }
 
-export function etiquetaServicio(
-  nombre: string,
-  grupo: string | null | undefined
-) {
-  return grupo ? `${nombre} (${grupo})` : nombre
-}
+export { etiquetaServicio } from "@/lib/servicios/etiqueta"
 
 function mapearServicio(fila: ServicioAnidado): Servicio {
   return {

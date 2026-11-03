@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TableCell, TableRow } from "@/components/ui/table"
 import type { FrecuenciaServicio } from "@/lib/frecuencias/queries"
+import { etiquetaServicio } from "@/lib/servicios/etiqueta"
 
 export function FrecuenciaServicioFila({
   servicio,
@@ -40,6 +41,10 @@ export function FrecuenciaServicioFila({
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  const etiqueta = etiquetaServicio(
+    servicio.servicio_nombre,
+    servicio.servicio_grupo
+  )
 
   function onGuardar() {
     setError(null)
@@ -78,9 +83,7 @@ export function FrecuenciaServicioFila({
   return (
     <>
       <TableRow>
-        <TableCell className="font-medium">
-          {servicio.servicio_nombre}
-        </TableCell>
+        <TableCell className="font-medium">{etiqueta}</TableCell>
         <TableCell>
           {editing ? (
             <Input
@@ -90,7 +93,7 @@ export function FrecuenciaServicioFila({
               className="w-32"
               autoFocus
               value={valor}
-              aria-label={`Frecuencia de ${servicio.servicio_nombre}`}
+              aria-label={`Frecuencia de ${etiqueta}`}
               onChange={(event) => setValor(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
@@ -168,7 +171,7 @@ export function FrecuenciaServicioFila({
               <AlertDialogHeader>
                 <AlertDialogTitle>Eliminar servicio</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Se eliminará «{servicio.servicio_nombre}» de esta frecuencia.
+                  Se eliminará «{etiqueta}» de esta frecuencia.
                   Esta acción no se puede deshacer.
                 </AlertDialogDescription>
               </AlertDialogHeader>
