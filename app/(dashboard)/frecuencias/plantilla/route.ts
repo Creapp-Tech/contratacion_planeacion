@@ -105,12 +105,12 @@ export async function GET() {
       (serviciosRes.data ?? []) as unknown as {
         id: string
         nombre: string
-        grupos_servicio: { nombre: string }[] | null
+        grupos_servicio: { nombre: string } | null
       }[]
     ).map((servicio) => [
       servicio.id,
-      servicio.grupos_servicio?.[0]?.nombre
-        ? `${servicio.nombre} (${servicio.grupos_servicio[0].nombre})`
+      servicio.grupos_servicio?.nombre
+        ? `${servicio.nombre} (${servicio.grupos_servicio.nombre})`
         : servicio.nombre,
     ]),
   ])
