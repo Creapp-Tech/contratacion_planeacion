@@ -161,11 +161,11 @@ export async function listServiciosOpciones(): Promise<
   return ((data ?? []) as unknown as {
     id: string
     nombre: string
-    grupos_servicio: { nombre: string }[] | null
+    grupos_servicio: { nombre: string } | null
   }[]).map((fila) => ({
     id: fila.id,
     nombre: fila.nombre,
-    grupo: fila.grupos_servicio?.[0]?.nombre ?? null,
+    grupo: fila.grupos_servicio?.nombre ?? null,
   }))
 }
 
