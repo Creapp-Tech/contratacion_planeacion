@@ -1,3 +1,5 @@
+import type { Asegurador } from "@/lib/sedes/queries"
+
 export type MapaFiltros = {
   regional?: string
   zonal?: string
@@ -34,6 +36,7 @@ export type OpcionesMapa = {
   tiposIps: string[]
   departamentos: string[]
   municipios: string[]
+  municipiosPorDepartamento: Record<string, string[]>
   aseguradores: Asegurador[]
   sedes: { id: string; nombre: string }[]
 }
@@ -46,25 +49,6 @@ export type ResumenMapa = {
   poblacion: number
   ocupacion: number | null
 }
-
-type SedeCruda = {
-  id: string
-  nombre: string
-  regional: string | null
-  zonal: string | null
-  marca: string | null
-  tipo_ips: string | null
-  departamento: string | null
-  municipio: string | null
-  estado: string
-  latitud: number | null
-  longitud: number | null
-  capacidad_usuarios: number | null
-  poblacion_aseguradora: { poblacion_activa: number | null }[] | null
-  sedes_aseguradores: { aseguradores_eps: { nombre_eps: string } | null }[] | null
-}
-
-import { listAseguradores, type Asegurador } from "@/lib/sedes/queries"
 
 export function calcularOcupacion(
   poblacion: number,
@@ -104,40 +88,6 @@ export function formatoPct(pct: number | null): string {
     maximumFractionDigits: 1,
   }).format(pct)
   return `${valor}%`
-}
-
-function mapearSedeMapa(sede: SedeCruda): SedeMapa {
-  const poblacion = (sede.poblacion_aseguradora ?? []).reduce(
-    (total, fila) => total + (fila.poblacion_activa ?? 0),
-    0
-  )
-
-  return {
-    id: sede.id,
-    nombre: sede.nombre,
-    regional: sede.regional,
-    zonal: sede.zonal,
-    marca: sede.marca,
-    tipo_ips: sede.tipo_ips,
-    departamento: sede.departamento,
-    municipio: sede.municipio,
-    estado: sede.estado,
-    latitud: sede.latitud == null ? null : Number(sede.latitud),
-    longitud: sede.longitud == null ? null : Number(sede.longitud),
-    capacidad_usuarios:
-      sede.capacidad_usuarios == null ? null : Number(sede.capacidad_usuarios),
-    poblacion,
-    ocupacion: calcularOcupacion(poblacion, sede.capacidad_usuarios),
-    aseguradores: (sede.sedes_aseguradores ?? [])
-      .map((fila) => fila.aseguradores_eps?.nombre_eps)
-      .filter((nombre): nombre is string => Boolean(nombre)),
-  }
-}
-
-function unicos(valores: (string | null)[]): string[] {
-  return [
-    ...new Set(valores.filter((valor): valor is string => Boolean(valor))),
-  ].sort((a, b) => a.localeCompare(b))
 }
 
 export function resumenMapa(sedes: SedeMapa[]): ResumenMapa {

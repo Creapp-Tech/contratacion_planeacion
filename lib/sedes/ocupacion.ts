@@ -1,7 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
-import { listAseguradores, type Asegurador } from "@/lib/sedes/queries"
+import { listAseguradores } from "@/lib/sedes/queries"
 import { calcularOcupacion, type SedeMapa, type OpcionesMapa, type ResumenMapa } from "@/lib/sedes/ocupacion-utils"
 
 export type MapaFiltros = {
@@ -107,14 +107,19 @@ export async function listSedesMapa(
   return ((data ?? []) as unknown as SedeCruda[]).map(mapearSedeMapa)
 }
 
-export async function opcionesMapa(): Promise<OpcionesMapa> {
+export async function opcionesMapa(regional?: string): Promise<OpcionesMapa> {
   const admin = createAdminClient()
 
+  let sedesQuery = admin
+    .from("sedes")
+    .select("id, nombre, regional, zonal, marca, tipo_ips, departamento, municipio")
+    .order("nombre", { ascending: true })
+
+  // Los usuarios con alcance limitado solo deben ver opciones de su regional.
+  if (regional) sedesQuery = sedesQuery.ilike("regional", regional)
+
   const [sedesRes, aseguradores] = await Promise.all([
-    admin
-      .from("sedes")
-      .select("id, nombre, regional, zonal, marca, tipo_ips, departamento, municipio")
-      .order("nombre", { ascending: true }),
+    sedesQuery,
     listAseguradores(),
   ])
 
@@ -131,6 +136,17 @@ export async function opcionesMapa(): Promise<OpcionesMapa> {
     municipio: string | null
   }[]
 
+  const municipiosPorDepartamento: Record<string, string[]> = {}
+  for (const fila of filas) {
+    if (!fila.departamento || !fila.municipio) continue
+    const lista = municipiosPorDepartamento[fila.departamento] ?? []
+    if (!lista.includes(fila.municipio)) lista.push(fila.municipio)
+    municipiosPorDepartamento[fila.departamento] = lista
+  }
+  for (const departamento of Object.keys(municipiosPorDepartamento)) {
+    municipiosPorDepartamento[departamento].sort((a, b) => a.localeCompare(b))
+  }
+
   return {
     regionales: unicos(filas.map((fila) => fila.regional)),
     zonales: unicos(filas.map((fila) => fila.zonal)),
@@ -138,6 +154,7 @@ export async function opcionesMapa(): Promise<OpcionesMapa> {
     tiposIps: unicos(filas.map((fila) => fila.tipo_ips)),
     departamentos: unicos(filas.map((fila) => fila.departamento)),
     municipios: unicos(filas.map((fila) => fila.municipio)),
+    municipiosPorDepartamento,
     aseguradores,
     sedes: filas.map((fila) => ({ id: fila.id, nombre: fila.nombre })),
   }

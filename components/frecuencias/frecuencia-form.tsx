@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Controller, useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react"
@@ -14,6 +14,7 @@ import {
 import { ChoiceChips } from "@/components/shared/choice-chips"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Combobox } from "@/components/ui/combobox"
 import {
   Field,
   FieldError,
@@ -117,6 +118,15 @@ export function FrecuenciaForm({
     control,
     name: "servicios",
   })
+
+  const opcionesServicios = useMemo(
+    () =>
+      opciones.servicios.map((servicio) => ({
+        value: servicio.id,
+        label: etiquetaServicio(servicio.nombre, servicio.grupo),
+      })),
+    [opciones.servicios]
+  )
 
   const serviciosError = errors.servicios as unknown as
     | { message?: string; root?: { message?: string } }
@@ -321,30 +331,16 @@ export function FrecuenciaForm({
                   control={control}
                   name={`servicios.${index}.servicio_id`}
                   render={({ field: servicioField }) => (
-                    <Select
-                      value={servicioField.value}
+                    <Combobox
+                      id={`servicios.${index}.servicio_id`}
+                      value={servicioField.value || null}
                       onValueChange={servicioField.onChange}
-                      items={toItems(
-                        opciones.servicios.map((servicio) => ({
-                          id: servicio.id,
-                          nombre: etiquetaServicio(servicio.nombre, servicio.grupo),
-                        }))
-                      )}
-                    >
-                      <SelectTrigger
-                        id={`servicios.${index}.servicio_id`}
-                        className="w-full"
-                      >
-                        <SelectValue placeholder="Selecciona el servicio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {opciones.servicios.map((servicio) => (
-                          <SelectItem key={servicio.id} value={servicio.id}>
-                            {etiquetaServicio(servicio.nombre, servicio.grupo)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={opcionesServicios}
+                      placeholder="Selecciona el servicio"
+                      searchPlaceholder="Buscar servicio..."
+                      emptyMessage="No se encontraron servicios."
+                      aria-invalid={!!errors.servicios?.[index]?.servicio_id}
+                    />
                   )}
                 />
                 <FieldError

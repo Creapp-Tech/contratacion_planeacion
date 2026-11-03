@@ -1,7 +1,6 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState, useMemo } from "react"
 import { useTransition } from "react"
 import { Loader2Icon, XIcon } from "lucide-react"
 
@@ -14,23 +13,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { MapaFiltros, OpcionesMapa } from "@/lib/sedes/ocupacion-utils"
-import { obtenerMunicipiosPorDepartamento } from "@/app/(dashboard)/sedes/mapa/actions"
 
 const ALL = "__all__"
 
-function toItems(placeholder: string, values: string[]) {
-  return Object.fromEntries([
-    [ALL, placeholder],
-    ...values.map((value) => [value, value]),
-  ])
-}
+type Opcion = { value: string; label: string }
 
 type FiltroSelectProps = {
   id: string
   value: string | undefined
   placeholder: string
-  items: Record<string, string>
-  options: { value: string; label: string }[]
+  options: Opcion[]
   onChange: (value: string | undefined) => void
 }
 
@@ -38,10 +30,15 @@ function FiltroSelect({
   id,
   value,
   placeholder,
-  items,
   options,
   onChange,
 }: FiltroSelectProps) {
+  // Base UI usa este mapa para resolver la etiqueta del valor seleccionado en
+  // el trigger (por eso cada value debe apuntar a su label, no a sí mismo).
+  const items = Object.fromEntries(
+    options.map((option) => [option.value, option.label])
+  )
+
   return (
     <Select
       value={value ?? ALL}
@@ -64,6 +61,26 @@ function FiltroSelect({
   )
 }
 
+function opcionesTexto(placeholder: string, valores: string[]): Opcion[] {
+  return [
+    { value: ALL, label: placeholder },
+    ...valores.map((valor) => ({ value: valor, label: valor })),
+  ]
+}
+
+function opcionesIdNombre(
+  placeholder: string,
+  opciones: { id: string; nombre: string }[]
+): Opcion[] {
+  return [
+    { value: ALL, label: placeholder },
+    ...opciones.map((opcion) => ({
+      value: opcion.id,
+      label: opcion.nombre,
+    })),
+  ]
+}
+
 export function MapaFiltros({
   opciones,
   filtros,
@@ -76,53 +93,34 @@ export function MapaFiltros({
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
 
-  const [departamento, setDepartamento] = useState<string | undefined>(
-    filtros.departamento
+  const regionalOptions = opcionesTexto("Todas las regionales", opciones.regionales)
+  const zonalOptions = opcionesTexto("Todas las zonales", opciones.zonales)
+  const marcaOptions = opcionesTexto("Todas las marcas", opciones.marcas)
+  const tipoIpsOptions = opcionesTexto(
+    "Todos los tipos de IPS",
+    opciones.tiposIps
   )
-  const [municipio, setMunicipio] = useState<string | undefined>(
-    filtros.municipio
+  const departamentoOptions = opcionesTexto(
+    "Todos los departamentos",
+    opciones.departamentos
   )
 
-  const [municipioOptions, setMunicipioOptions] = useState<{ value: string; label: string }[]>([])
-
-  const regionalOptions = [
-    { value: ALL, label: "Todas las regionales" },
-    ...opciones.regionales.map((value) => ({ value, label: value })),
-  ]
-  const zonalOptions = [
-    { value: ALL, label: "Todas las zonales" },
-    ...opciones.zonales.map((value) => ({ value, label: value })),
-  ]
-  const marcaOptions = [
-    { value: ALL, label: "Todas las marcas" },
-    ...opciones.marcas.map((value) => ({ value, label: value })),
-  ]
-  const tipoIpsOptions = [
-    { value: ALL, label: "Todos los tipos de IPS" },
-    ...opciones.tiposIps.map((value) => ({ value, label: value })),
-  ]
-  const departamentoOptions = [
-    { value: ALL, label: "Todos los departamentos" },
-    ...opciones.departamentos.map((value) => ({ value, label: value })),
-  ]
-  const municipioOptionsRaw = useMemo(
-    () => [
-      { value: ALL, label: "Todos los municipios" },
-      ...opciones.municipios.map((value) => ({ value, label: value })),
-    ],
-    [opciones.municipios]
+  const municipiosDisponibles = filtros.departamento
+    ? opciones.municipiosPorDepartamento[filtros.departamento] ?? []
+    : opciones.municipios
+  const municipioOptions = opcionesTexto(
+    "Todos los municipios",
+    municipiosDisponibles
   )
-  const aseguradorOptions = [
-    { value: ALL, label: "Todos los aseguradores" },
-    ...opciones.aseguradores.map((eps) => ({
-      value: eps.id,
-      label: eps.nombre_eps,
-    })),
-  ]
-  const sedeOptions = [
-    { value: ALL, label: "Todas las sedes" },
-    ...opciones.sedes.map((sede) => ({ value: sede.id, label: sede.nombre })),
-  ]
+
+  const aseguradorOptions = opcionesIdNombre(
+    "Todos los aseguradores",
+    opciones.aseguradores.map((eps) => ({
+      id: eps.id,
+      nombre: eps.nombre_eps,
+    }))
+  )
+  const sedeOptions = opcionesIdNombre("Todas las sedes", opciones.sedes)
 
   function updateParams(next: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString())
@@ -138,35 +136,18 @@ export function MapaFiltros({
     })
   }
 
-  // Efecto: cargar municipios cuando cambia el departamento
-  useEffect(() => {
-    async function cargarMunicipios() {
-      if (departamento) {
-        try {
-          const result = await obtenerMunicipiosPorDepartamento(departamento)
-          if (result.ok) {
-            const municipios = [...new Set((result.data ?? []).filter(Boolean) as string[])].sort(
-              (a, b) => a.localeCompare(b)
-            )
-            setMunicipioOptions(
-              municipios.map((m) => ({ value: m as string, label: m as string }))
-            )
-          } else {
-            setMunicipioOptions([])
-          }
-          setMunicipio(undefined)
-        } catch (e) {
-          setMunicipioOptions([])
-        }
-      } else {
-        setMunicipioOptions(
-          municipioOptionsRaw.filter((o) => o.value !== ALL).map((o) => ({ value: o.value, label: o.label }))
-        )
-        setMunicipio(undefined)
-      }
-    }
-    cargarMunicipios()
-  }, [departamento, municipioOptionsRaw])
+  function onDepartamentoChange(value: string | undefined) {
+    const municipios = value
+      ? opciones.municipiosPorDepartamento[value] ?? []
+      : opciones.municipios
+    const municipioValido =
+      filtros.municipio && municipios.includes(filtros.municipio)
+
+    updateParams({
+      departamento: value,
+      municipio: municipioValido ? filtros.municipio : undefined,
+    })
+  }
 
   const hasFiltros = Boolean(
     filtros.regional ||
@@ -185,7 +166,6 @@ export function MapaFiltros({
         id="mapa-regional"
         value={filtros.regional}
         placeholder="Regional"
-        items={toItems("Todas las regionales", opciones.regionales)}
         options={regionalOptions}
         onChange={(value) => updateParams({ regional: value })}
       />
@@ -194,7 +174,6 @@ export function MapaFiltros({
         id="mapa-zonal"
         value={filtros.zonal}
         placeholder="Zonal"
-        items={toItems("Todas las zonales", opciones.zonales)}
         options={zonalOptions}
         onChange={(value) => updateParams({ zonal: value })}
       />
@@ -203,7 +182,6 @@ export function MapaFiltros({
         id="mapa-marca"
         value={filtros.marca}
         placeholder="Marca"
-        items={toItems("Todas las marcas", opciones.marcas)}
         options={marcaOptions}
         onChange={(value) => updateParams({ marca: value })}
       />
@@ -212,43 +190,30 @@ export function MapaFiltros({
         id="mapa-tipo-ips"
         value={filtros.tipoIps}
         placeholder="Tipo de IPS"
-        items={toItems("Todos los tipos de IPS", opciones.tiposIps)}
         options={tipoIpsOptions}
         onChange={(value) => updateParams({ tipoIps: value })}
       />
 
       <FiltroSelect
         id="mapa-departamento"
-        value={departamento ?? filtros.departamento}
+        value={filtros.departamento}
         placeholder="Departamento"
-        items={toItems("Todos los departamentos", opciones.departamentos)}
         options={departamentoOptions}
-        onChange={(value) => {
-          setDepartamento(value === ALL ? undefined : value)
-          setMunicipioOptions([])
-          setMunicipio(undefined)
-        }}
+        onChange={onDepartamentoChange}
       />
 
       <FiltroSelect
         id="mapa-municipio"
-        value={
-          municipio ?? (departamento ? municipioOptions.find((o) => o.value === filtros.municipio)?.value ?? undefined : undefined)
-        }
+        value={filtros.municipio}
         placeholder="Municipio"
-        items={toItems("Todos los municipios", municipioOptions.map((o) => o.value))}
-        options={municipioOptions.length > 0 ? municipioOptions : municipioOptionsRaw}
-        onChange={(value) => setMunicipio(value)}
+        options={municipioOptions}
+        onChange={(value) => updateParams({ municipio: value })}
       />
 
       <FiltroSelect
         id="mapa-asegurador"
         value={filtros.asegurador}
         placeholder="Asegurador"
-        items={toItems(
-          "Todos los aseguradores",
-          opciones.aseguradores.map((eps) => eps.id)
-        )}
         options={aseguradorOptions}
         onChange={(value) => updateParams({ asegurador: value })}
       />
@@ -257,10 +222,6 @@ export function MapaFiltros({
         id="mapa-sede"
         value={filtros.sede}
         placeholder="Sede"
-        items={toItems(
-          "Todas las sedes",
-          opciones.sedes.map((sede) => sede.id)
-        )}
         options={sedeOptions}
         onChange={(value) => updateParams({ sede: value })}
       />

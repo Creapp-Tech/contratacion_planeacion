@@ -84,7 +84,7 @@ components/sedes/mapa/
   ├─ mapa-filtros.tsx                   # client: Regional · Zonal · Asegurador · Sede + Limpiar
   ├─ mapa-tarjetas.tsx                  # cards: sedes · capacidad · población · ocupación global
   ├─ mapa-sedes.tsx                     # client: dynamic(ssr:false) + leyenda + estados vacíos
-  ├─ mapa-leaflet.tsx                   # MapContainer, CircleMarker, Tooltip con datos en %
+  ├─ mapa-maplibre.tsx                  # MapLibre GL + OpenFreeMap (Positron), puntos y popups con datos en %
   └─ mapa-graficos.tsx                  # recharts: barras apiladas por sede + donut global
 ```
 
@@ -99,7 +99,7 @@ components/sedes/mapa/
 - [x] **F3** Módulo `/poblaciones` (tabla, KPIs, form, acciones)
 - [x] **F4** `lib/sedes/ocupacion.ts` (datos del mapa + colores)
 - [x] **F5** Página `/sedes/mapa`: filtros + cards
-- [x] **F6** Mapa Leaflet con tooltips de ocupación
+- [x] **F6** Mapa MapLibre + OpenFreeMap con tooltips de ocupación
 - [x] **F7** Gráficos recharts (barras + donut)
 - [x] **F8** Nav sidebar
 - [x] **F9** `eslint` + `next build`

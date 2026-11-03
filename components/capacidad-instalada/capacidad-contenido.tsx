@@ -2,9 +2,10 @@ import { mismaRegional, requireAlcancePlaneacion } from "@/lib/auth/session"
 import {
   aplanarPoblacion,
   AREAS_NINGUNA,
-  SEDES_NINGUNA,
+  areasInfraPorDefecto,
   opcionesInfra,
   opcionesPoblacion,
+  SEDES_NINGUNA,
   type CategoriaOcupacion,
   type FiltrosInfra,
   type FiltrosPoblacion,
@@ -111,10 +112,16 @@ export async function CapacidadContenido({
 
   const personalizada = Number(pick(params.i_custom))
 
+  const opciones = opcionesInfra(sedesEnAlcance)
+  const areasDefecto = areasInfraPorDefecto(opciones.areas)
+  const areasParametro = parseAreas(pick(params.i_areas))
+
   const filtros: FiltrosInfra = {
     regional: pick(params.i_regional),
     sede: pick(params.i_sede),
-    areas: parseAreas(pick(params.i_areas)),
+    areas:
+      areasParametro ??
+      (areasDefecto.length > 0 ? areasDefecto : undefined),
     tipoPoblacion,
     personalizada:
       Number.isFinite(personalizada) && personalizada >= 0
@@ -128,7 +135,7 @@ export async function CapacidadContenido({
       <InfraVista
         sedes={sedesEnAlcance}
         frecuencias={frecuenciasEnAlcance}
-        opciones={opcionesInfra(sedesEnAlcance)}
+        opciones={opciones}
         filtros={filtros}
       />
     </div>

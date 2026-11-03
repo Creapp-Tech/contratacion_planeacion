@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { SedeMapa } from "@/lib/sedes/ocupacion-utils"
 
-const MapaLeaflet = dynamic(() => import("./mapa-leaflet"), {
+const MapaMapLibre = dynamic(() => import("./mapa-maplibre"), {
   ssr: false,
   loading: () => <Skeleton className="h-full w-full" />,
 })
@@ -44,7 +44,7 @@ export function MapaSedes({ sedes }: { sedes: SedeMapa[] }) {
 
   return (
     <div className="relative isolate h-[520px] overflow-hidden rounded-xl border">
-      <MapaLeaflet sedes={sedes} />
+      <MapaMapLibre sedes={sedes} />
 
       <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border bg-background/95 px-3 py-2 shadow-sm">
         <p className="mb-1 text-[11px] font-medium text-muted-foreground">

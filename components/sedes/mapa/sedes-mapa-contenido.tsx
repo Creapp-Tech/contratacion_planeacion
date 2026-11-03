@@ -4,7 +4,6 @@ import {
   opcionesMapa,
   type MapaFiltros,
   type OpcionesMapa,
-  type SedeMapa,
 } from "@/lib/sedes/ocupacion"
 import { resumenMapa } from "@/lib/sedes/ocupacion-utils"
 
@@ -20,25 +19,6 @@ const SIN_REGIONAL = "__sin_regional__"
 
 function pick(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined
-}
-
-function unicos(valores: (string | null)[]) {
-  return [
-    ...new Set(valores.filter((valor): valor is string => Boolean(valor))),
-  ].sort((a, b) => a.localeCompare(b))
-}
-
-function opcionesDesdeSedes(sedes: SedeMapa[]): OpcionesMapa {
-  return {
-    regionales: unicos(sedes.map((sede) => sede.regional)),
-    zonales: unicos(sedes.map((sede) => sede.zonal)),
-    marcas: unicos(sedes.map((sede) => sede.marca)),
-    tiposIps: unicos(sedes.map((sede) => sede.tipo_ips)),
-    departamentos: unicos(sedes.map((sede) => sede.departamento)),
-    municipios: unicos(sedes.map((sede) => sede.municipio)),
-    aseguradores: [],
-    sedes: sedes.map((sede) => ({ id: sede.id, nombre: sede.nombre })),
-  }
 }
 
 export async function SedesMapaContenido({
@@ -64,15 +44,16 @@ export async function SedesMapaContenido({
 
   const [sedes, opciones] = await Promise.all([
     listSedesMapa(filtros),
-    opcionesMapa(),
+    opcionesMapa(
+      alcance.verTodo ? undefined : alcance.regional ?? SIN_REGIONAL
+    ),
   ])
 
   const opcionesFiltradas: OpcionesMapa = alcance.verTodo
     ? opciones
     : {
-        ...opcionesDesdeSedes(sedes),
+        ...opciones,
         regionales: alcance.regional ? [alcance.regional] : [],
-        aseguradores: opciones.aseguradores,
       }
 
   return (

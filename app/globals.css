@@ -127,3 +127,76 @@
     @apply font-sans;
     }
 }
+
+/* Mapa de sedes: OpenFreeMap (Positron) con estética de dashboard. */
+.mapa-dashboard {
+  background-color: #f2f3f0;
+}
+
+.mapa-dashboard .maplibregl-popup-content {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.mapa-dashboard .maplibregl-popup-tip {
+  border-top-color: var(--background);
+  border-bottom-color: var(--background);
+}
+
+.mapa-dashboard .maplibregl-popup.mapa-tooltip {
+  pointer-events: none;
+}
+
+.mapa-dashboard .maplibregl-popup.mapa-tooltip .maplibregl-popup-content {
+  padding: 10px 12px;
+}
+
+.mapa-dashboard .maplibregl-popup-close-button {
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  font-size: 16px;
+}
+
+.mapa-dashboard .maplibregl-popup-close-button:hover {
+  background: var(--accent);
+}
+
+.mapa-dashboard .maplibregl-ctrl-attrib {
+  border-top-left-radius: 8px;
+  background: color-mix(in oklab, var(--background) 85%, transparent);
+  padding: 2px 6px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.mapa-dashboard .maplibregl-ctrl-attrib a {
+  color: inherit;
+}
+
+.mapa-dashboard .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.mapa-dashboard .maplibregl-ctrl-group button {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.mapa-dashboard .maplibregl-ctrl-group button:hover {
+  background: var(--accent);
+}
+
+.mapa-dashboard .maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border);
+}

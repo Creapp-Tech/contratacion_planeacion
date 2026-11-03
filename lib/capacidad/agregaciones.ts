@@ -148,6 +148,33 @@ function normalizarArea(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
 }
 
+// Áreas que el análisis de infraestructura mantiene activas por defecto.
+// Se incluyen variantes de nombre para tolerar catálogos existentes.
+const NOMBRES_AREAS_INFRA_POR_DEFECTO = new Set([
+  "consultorios apoyo paramedico",
+  "apoyo paramedico",
+  "consultorios enfermeria",
+  "enfermeria",
+  "consultorios medicina espesializada",
+  "consultorios medicina especializada",
+  "medicina especializada",
+  "especialidades",
+  "consultorios medicina general",
+  "medicina general",
+])
+
+export function esAreaInfraPorDefecto(nombre: string): boolean {
+  return NOMBRES_AREAS_INFRA_POR_DEFECTO.has(normalizarArea(nombre))
+}
+
+export function areasInfraPorDefecto(
+  areas: { id: string; nombre: string }[]
+): string[] {
+  return areas
+    .filter((area) => esAreaInfraPorDefecto(area.nombre))
+    .map((area) => area.id)
+}
+
 export function ordenAreaCapacidad(nombre: string): number {
   const clave = normalizarArea(nombre)
   for (let i = 0; i < ORDEN_AREAS_CAPACIDAD.length; i++) {

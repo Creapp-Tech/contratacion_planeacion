@@ -14,7 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { FiltrosInfra, OpcionesInfra } from "@/lib/capacidad/agregaciones"
-import { AREAS_NINGUNA } from "@/lib/capacidad/agregaciones"
+import {
+  AREAS_NINGUNA,
+  areasInfraPorDefecto,
+} from "@/lib/capacidad/agregaciones"
 
 import { MultiSelect } from "../multi-select"
 import { useParametrosBusqueda } from "../use-parametros"
@@ -78,10 +81,20 @@ export function InfraFiltros({
     { value: "personalizada", label: "Personalizada" },
   ]
 
+  const areasDefecto = areasInfraPorDefecto(opciones.areas)
+  const areasBase =
+    areasDefecto.length > 0
+      ? areasDefecto
+      : opciones.areas.map((area) => area.id)
+  const areasSeleccionadas = filtros.areas ?? areasBase
+  const areasDifieren =
+    areasSeleccionadas.length !== areasBase.length ||
+    areasSeleccionadas.some((id) => !areasBase.includes(id))
+
   const hayFiltros = Boolean(
     filtros.regional ||
       filtros.sede ||
-      (filtros.areas && filtros.areas.length < opciones.areas.length) ||
+      areasDifieren ||
       filtros.tipoPoblacion !== "activa"
   )
 
@@ -145,17 +158,11 @@ export function InfraFiltros({
         <MultiSelect
           id="infra-areas"
           opciones={opciones.areas}
-          seleccion={
-            filtros.areas ?? opciones.areas.map((area) => area.id)
-          }
+          seleccion={areasSeleccionadas}
           onChange={(ids) =>
             actualizar({
               [PARAM.areas]:
-                ids.length === 0
-                  ? AREAS_NINGUNA
-                  : ids.length === opciones.areas.length
-                    ? undefined
-                    : ids.join(","),
+                ids.length === 0 ? AREAS_NINGUNA : ids.join(","),
             })
           }
           placeholderTodas="Todas las áreas"
