@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import {
   Building2Icon,
   CircleCheckIcon,
+  CircleXIcon,
   FileTextIcon,
   TriangleAlertIcon,
 } from "lucide-react"
@@ -96,6 +97,10 @@ export function ResumenContratos({
       calcularVigencia(contrato.fecha_fin).estado === "proximo_vencer"
   ).length
 
+  const vencidos = contratos.filter(
+    (contrato) => calcularVigencia(contrato.fecha_fin).estado === "vencido"
+  ).length
+
   function aplicarFiltro(filtro: FiltroVigencia) {
     // Al hacer clic en el filtro ya activo se vuelve a "todos".
     const destino: FiltroVigencia =
@@ -113,7 +118,7 @@ export function ResumenContratos({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <TarjetaResumen
         titulo="Aseguradores únicos"
         detalle="EPS con contratos"
@@ -143,6 +148,14 @@ export function ResumenContratos({
         icono={<TriangleAlertIcon className="size-5 text-amber-600" />}
         activa={vigencia === "proximo_vencer"}
         onClick={() => aplicarFiltro("proximo_vencer")}
+      />
+      <TarjetaResumen
+        titulo="Vencidos"
+        detalle="Fecha de fin superada"
+        valor={vencidos}
+        icono={<CircleXIcon className="size-5 text-red-600" />}
+        activa={vigencia === "vencido"}
+        onClick={() => aplicarFiltro("vencido")}
       />
     </div>
   )
