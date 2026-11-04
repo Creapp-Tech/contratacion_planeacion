@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import {
   SEDE_ESTADOS,
   SEDE_ESTADO_VALUES,
@@ -91,6 +92,25 @@ function toSelectItems(options: string[]) {
   ])
 }
 
+function seleccionInicialAreas(
+  sede?: SedeDetalle
+): Record<string, AreaSeleccion> {
+  if (!sede) return {}
+  return Object.fromEntries(
+    sede.areas.map((area) => [
+      area.area_id,
+      {
+        cantidad: area.cantidad,
+        cantidad_habilitada: area.cantidad_habilitada ?? area.cantidad,
+      },
+    ])
+  )
+}
+
+function seleccionInicialAseguradores(sede?: SedeDetalle): Set<string> {
+  return new Set(sede?.aseguradores.map((a) => a.asegurador_eps_id) ?? [])
+}
+
 type SedeFormProps = {
   mode: "crear" | "editar"
   sede?: SedeDetalle
@@ -133,53 +153,44 @@ export function SedeForm({
 
   const [areasSeleccionadas, setAreasSeleccionadas] = useState<
     Record<string, AreaSeleccion>
-  >(() => {
-    if (!sede) return {}
-    return Object.fromEntries(
-      sede.areas.map((area) => [
-        area.area_id,
-        {
-          cantidad: area.cantidad,
-          cantidad_habilitada: area.cantidad_habilitada ?? area.cantidad,
-        },
-      ])
-    )
-  })
+  >(() => seleccionInicialAreas(sede))
 
   const [aseguradoresSeleccionados, setAseguradoresSeleccionados] = useState<
     Set<string>
-  >(() => new Set(sede?.aseguradores.map((a) => a.asegurador_eps_id) ?? []))
+  >(() => seleccionInicialAseguradores(sede))
+
+  const valoresIniciales: FormValues = {
+    nombre: sede?.nombre ?? "",
+    marca: sede?.marca ?? "",
+    tipo_ips: sede?.tipo_ips ?? "",
+    nivel: sede?.nivel ?? "",
+    codigo_reps: sede?.codigo_reps ?? "",
+    departamento: sede?.departamento ?? "",
+    municipio: sede?.municipio ?? "",
+    barrio: sede?.barrio ?? "",
+    direccion: sede?.direccion ?? "",
+    pais: sede?.pais ?? "Colombia",
+    latitud: sede?.latitud != null ? String(sede.latitud) : "",
+    longitud: sede?.longitud != null ? String(sede.longitud) : "",
+    gerente: sede?.gerente ?? "",
+    fecha_apertura: sede?.fecha_apertura ?? "",
+    regional: sede?.regional ?? "",
+    zonal: sede?.zonal ?? "",
+    estado: (sede?.estado as SedeEstado) ?? "activa",
+    fecha_cierre: sede?.fecha_cierre ?? "",
+    metros_cuadrado:
+      sede?.metros_cuadrado != null ? String(sede.metros_cuadrado) : "",
+    capacidad_inicial:
+      sede?.capacidad_inicial != null ? String(sede.capacidad_inicial) : "",
+    capacidad_usuarios:
+      sede?.capacidad_usuarios != null ? String(sede.capacidad_usuarios) : "",
+    numero_pisos: sede?.numero_pisos != null ? String(sede.numero_pisos) : "",
+    observaciones: sede?.observaciones ?? "",
+  }
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      nombre: sede?.nombre ?? "",
-      marca: sede?.marca ?? "",
-      tipo_ips: sede?.tipo_ips ?? "",
-      nivel: sede?.nivel ?? "",
-      codigo_reps: sede?.codigo_reps ?? "",
-      departamento: sede?.departamento ?? "",
-      municipio: sede?.municipio ?? "",
-      barrio: sede?.barrio ?? "",
-      direccion: sede?.direccion ?? "",
-      pais: sede?.pais ?? "Colombia",
-      latitud: sede?.latitud != null ? String(sede.latitud) : "",
-      longitud: sede?.longitud != null ? String(sede.longitud) : "",
-      gerente: sede?.gerente ?? "",
-      fecha_apertura: sede?.fecha_apertura ?? "",
-      regional: sede?.regional ?? "",
-      zonal: sede?.zonal ?? "",
-      estado: (sede?.estado as SedeEstado) ?? "activa",
-      fecha_cierre: sede?.fecha_cierre ?? "",
-      metros_cuadrado:
-        sede?.metros_cuadrado != null ? String(sede.metros_cuadrado) : "",
-      capacidad_inicial:
-        sede?.capacidad_inicial != null ? String(sede.capacidad_inicial) : "",
-      capacidad_usuarios:
-        sede?.capacidad_usuarios != null ? String(sede.capacidad_usuarios) : "",
-      numero_pisos: sede?.numero_pisos != null ? String(sede.numero_pisos) : "",
-      observaciones: sede?.observaciones ?? "",
-    },
+    defaultValues: valoresIniciales,
   })
 
   const {
@@ -188,6 +199,13 @@ export function SedeForm({
     handleSubmit,
     formState: { errors, isSubmitting },
   } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
+    setAreasSeleccionadas(seleccionInicialAreas(sede))
+    setAseguradoresSeleccionados(seleccionInicialAseguradores(sede))
+  })
 
   const estado = useWatch({ control, name: "estado" })
   const tipoIps = useWatch({ control, name: "tipo_ips" })

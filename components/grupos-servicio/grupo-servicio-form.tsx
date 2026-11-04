@@ -20,6 +20,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type { GrupoServicio } from "@/lib/servicios/queries"
 import { grupoServicioSchema } from "@/lib/validations/grupo-servicio"
 
@@ -35,15 +36,24 @@ export function GrupoServicioForm(props: GrupoServicioFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: FormValues = {
+    nombre: grupo?.nombre ?? "",
+  }
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(grupoServicioSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(grupoServicioSchema),
-    defaultValues: {
-      nombre: grupo?.nombre ?? "",
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: FormValues) {

@@ -24,6 +24,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 
 type AseguradorFormProps =
   | { mode: "crear" }
@@ -35,15 +36,24 @@ export function AseguradorForm(props: AseguradorFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: AseguradorInput = {
+    nombre_eps: asegurador?.nombre_eps ?? "",
+  }
+
+  const form = useForm<AseguradorInput>({
+    resolver: zodResolver(aseguradorSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<AseguradorInput>({
-    resolver: zodResolver(aseguradorSchema),
-    defaultValues: {
-      nombre_eps: asegurador?.nombre_eps ?? "",
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: AseguradorInput) {

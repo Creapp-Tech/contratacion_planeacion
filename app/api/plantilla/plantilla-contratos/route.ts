@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   // 1) Contratos
   const datosContratos = [
-    ["nombre*", "asegurador_id*", "numero_contrato*", "regional_id*", "ciudad*", "modalidad*", "responsable_id*", "prorroga_automatica* (Sí/No)", "tiene_programas* (Sí/No)", "sede_ids* (separado por ;)", "programa_ids* (separado por ;)", "categoria_contrato_id", "tipo_contrato_id", "estado_legalizacion_id", "estado_ejecucion_id", "fecha_inicio (dd/mm/aaaa)", "fecha_fin (dd/mm/aaaa)", "periodicidad", "poblacion_total", "valor_total", "valor_percapita_manual", "notas"],
+    ["nombre*", "asegurador_id*", "numero_contrato*", "regional_ids* (separado por ;)", "ciudad*", "modalidad*", "responsable_id*", "prorroga_automatica* (Sí/No)", "tiene_programas* (Sí/No)", "sede_ids* (separado por ;)", "programa_ids* (separado por ;)", "categoria_contrato_id", "tipo_contrato_id", "estado_legalizacion_id", "estado_ejecucion_id", "fecha_inicio (dd/mm/aaaa)", "fecha_fin (dd/mm/aaaa)", "periodicidad", "poblacion_total", "valor_total", "valor_percapita_manual", "notas"],
     ["Ejemplo contrato", primerAseguradorId, "EJEMPLO-1", primerRegionalId, "Bogotá", "capita", primerResponsableId, "Sí", "No", primeraSedeId, "", "", "", "", "", "01/01/2026", "31/12/2026", "mensual", 100, 5000, 50, "Notas ejemplo"]
   ]
   const wsContratos = XLSX.utils.aoa_to_sheet(datosContratos)
@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
   const instrucciones = [
     ["INSTRUCCIONES"],
     ["- Completa la pestaña 'Contratos' con los datos (usando valores exactos de las pestañas de listas)."],
+    ["- Regionales: usa la pestaña 'Regionales'. Puedes indicar varias separadas por ';'. 'Nacional' es excluyente."],
     ["- Obligatorios marcados con *. Fechas: dd/mm/aaaa. Booleanos: Sí / No."],
     ["- Sedes y valores: usa las pestañas 'Contrato_Sedes' y 'Contrato_Valores' ligadas por numero_contrato."],
     ["- Las pestañas de listas (Aseguradores, Regionales, etc.) son de solo lectura."],

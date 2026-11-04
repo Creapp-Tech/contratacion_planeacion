@@ -20,6 +20,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type { Regional } from "@/lib/regionales/queries"
 import { regionalSchema } from "@/lib/validations/regional"
 
@@ -35,15 +36,24 @@ export function RegionalForm(props: RegionalFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: RegionalFormValues = {
+    nombre: regional?.nombre ?? "",
+  }
+
+  const form = useForm<RegionalFormValues>({
+    resolver: zodResolver(regionalSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegionalFormValues>({
-    resolver: zodResolver(regionalSchema),
-    defaultValues: {
-      nombre: regional?.nombre ?? "",
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: RegionalFormValues) {

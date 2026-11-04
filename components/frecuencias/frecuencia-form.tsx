@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select"
 import type { Frecuencia } from "@/lib/frecuencias/queries"
 import { TIPOS_FRECUENCIA, type TipoFrecuencia } from "@/lib/frecuencias/tipos"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import { etiquetaServicio } from "@/lib/servicios/etiqueta"
 
 const formSchema = z.object({
@@ -89,29 +90,38 @@ export function FrecuenciaForm({
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: FormValues = {
+    tipo_frecuencia:
+      (frecuencia?.tipo_frecuencia as TipoFrecuencia) ?? "nota_tecnica_viva",
+    nombre_nota_tecnica: frecuencia?.nombre_nota_tecnica ?? "",
+    sede_id: frecuencia?.sede_id ?? "",
+    regimen_id: frecuencia?.regimen_id ?? "",
+    asegurador_eps_id: frecuencia?.asegurador_eps_id ?? "",
+    version: frecuencia?.version ?? "",
+    servicios:
+      frecuencia && frecuencia.servicios.length > 0
+        ? frecuencia.servicios.map((servicio) => ({
+            servicio_id: servicio.servicio_id,
+            frecuencia: String(servicio.frecuencia),
+          }))
+        : [{ ...SERVICIO_VACIO }],
+  }
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      tipo_frecuencia:
-        (frecuencia?.tipo_frecuencia as TipoFrecuencia) ?? "nota_tecnica_viva",
-      nombre_nota_tecnica: frecuencia?.nombre_nota_tecnica ?? "",
-      sede_id: frecuencia?.sede_id ?? "",
-      regimen_id: frecuencia?.regimen_id ?? "",
-      asegurador_eps_id: frecuencia?.asegurador_eps_id ?? "",
-      version: frecuencia?.version ?? "",
-      servicios:
-        frecuencia && frecuencia.servicios.length > 0
-          ? frecuencia.servicios.map((servicio) => ({
-              servicio_id: servicio.servicio_id,
-              frecuencia: String(servicio.frecuencia),
-            }))
-          : [{ ...SERVICIO_VACIO }],
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   const { fields, append, remove } = useFieldArray({

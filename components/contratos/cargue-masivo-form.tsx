@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { Loader2Icon, CheckIcon, AlertCircleIcon, DownloadIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 
 export function CargueMasivoForm({ archivo }: { archivo: File | null }) {
   const [procesando, setProcesando] = useState(false)
@@ -15,9 +16,18 @@ export function CargueMasivoForm({ archivo }: { archivo: File | null }) {
     errores?: { fila: number; motivo: string; campos?: string[] }[]
     detalles?: { fila: number; numero_contrato?: string; creado: boolean; mensaje?: string }[]
   } | null>(null)
+  // Permite descartar respuestas de un cargue iniciado antes de salir de la ruta.
+  const ejecucionRef = useRef(0)
+
+  useResetOnHide(() => {
+    ejecucionRef.current += 1
+    setProcesando(false)
+    setResultado(null)
+  })
 
   const confirmar = useCallback(async () => {
     if (!archivo) return
+    const ejecucion = ++ejecucionRef.current
     setProcesando(true)
     setResultado(null)
 
@@ -29,7 +39,9 @@ export function CargueMasivoForm({ archivo }: { archivo: File | null }) {
         method: "POST",
         body: formData,
       })
+      if (ejecucionRef.current !== ejecucion) return
       const data = await res.json()
+      if (ejecucionRef.current !== ejecucion) return
       if (!res.ok) {
         setResultado({
           creados: 0,
@@ -45,13 +57,14 @@ export function CargueMasivoForm({ archivo }: { archivo: File | null }) {
         })
       }
     } catch (err: any) {
+      if (ejecucionRef.current !== ejecucion) return
       setResultado({
         creados: 0,
         rechazados: 0,
         errores: [{ fila: 0, motivo: err?.message || "Error de red" }],
       })
     }
-    setProcesando(false)
+    if (ejecucionRef.current === ejecucion) setProcesando(false)
   }, [archivo])
 
   const descargarErrores = useCallback(() => {

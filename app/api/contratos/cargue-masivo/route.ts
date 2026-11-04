@@ -3,7 +3,7 @@ import * as XLSX from "xlsx"
 import { z } from "zod"
 import { contratoSchema } from "@/lib/validations/contrato"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { MODALIDAD_VALUES } from "@/lib/contratos/constantes"
+import { esRegionalNacional, MODALIDAD_VALUES } from "@/lib/contratos/constantes"
 
 function filaAObjeto(fila: any[]): Record<string, any> {
   // Mapeo basado en la plantilla (encabezados de fila 1)
@@ -11,7 +11,7 @@ function filaAObjeto(fila: any[]): Record<string, any> {
     nombre: fila[0],
     asegurador_id: fila[1],
     numero_contrato: fila[2],
-    regional_id: fila[3],
+    regional_ids_str: fila[3],
     ciudad: fila[4],
     modalidad: fila[5],
     responsable_id: fila[6],
@@ -142,7 +142,12 @@ export async function POST(req: NextRequest) {
         nombre: String(raw.nombre || "").trim(),
         asegurador_id: String(raw.asegurador_id || "").trim(),
         numero_contrato: numContrato,
-        regional_id: String(raw.regional_id || "").trim(),
+        regional_ids: raw.regional_ids_str
+          ? String(raw.regional_ids_str)
+              .split(/[;,]/)
+              .map((s: string) => s.trim())
+              .filter((s: string) => s)
+          : [],
         ciudad: String(raw.ciudad || "").trim(),
         modalidad: String(raw.modalidad || "").trim() as any,
         responsable_id: String(raw.responsable_id || "").trim(),
@@ -195,9 +200,31 @@ export async function POST(req: NextRequest) {
       const { data: asegurador } = await admin.from("aseguradores_eps").select("id, estado").eq("id", datos.asegurador_id).eq("estado", "activo").maybeSingle()
       if (!asegurador) { erroresReferencia.push("El asegurador no existe o no está activo"); camposErroneos.push("asegurador_id") }
 
-      // Regional
-      const { data: regional } = await admin.from("regionales").select("id, nombre, estado").eq("id", datos.regional_id).maybeSingle()
-      if (!regional || regional.estado !== "activo") { erroresReferencia.push("La regional no existe o no está activa"); camposErroneos.push("regional_id") }
+      // Regionales (una o varias; "Nacional" es excluyente)
+      const regionalIds = [...new Set(datos.regional_ids)]
+      const { data: regionalesData } = await admin
+        .from("regionales")
+        .select("id, nombre")
+        .in("id", regionalIds)
+      const regionalesEncontradas = (regionalesData || []) as {
+        id: string
+        nombre: string
+      }[]
+
+      if (regionalesEncontradas.length !== regionalIds.length) {
+        erroresReferencia.push("Alguna regional no existe")
+        camposErroneos.push("regional_ids")
+      }
+
+      const esNacional = regionalesEncontradas.some((regional) =>
+        esRegionalNacional(regional.nombre)
+      )
+      if (esNacional && regionalIds.length > 1) {
+        erroresReferencia.push(
+          "La regional Nacional no se puede combinar con otras regionales"
+        )
+        camposErroneos.push("regional_ids")
+      }
 
       // Responsable
       const { data: responsable } = await admin.from("catalogos_opciones").select("id, nombre").eq("dominio", "responsable").eq("activo", true).eq("id", datos.responsable_id).maybeSingle()
@@ -213,8 +240,24 @@ export async function POST(req: NextRequest) {
           erroresReferencia.push("Alguna sede seleccionada no existe"); camposErroneos.push("sede_ids")
         } else if (sedesEncontradas.some((s) => s.estado !== "activa")) {
           erroresReferencia.push("Todas las sedes deben estar activas"); camposErroneos.push("sede_ids")
-        } else if (regional && sedesEncontradas.some((s) => (s.regional ?? "").trim().toLowerCase() !== regional.nombre.trim().toLowerCase())) {
-          erroresReferencia.push("Las sedes deben pertenecer a la regional seleccionada"); camposErroneos.push("sede_ids")
+        } else if (!esNacional) {
+          const nombresPermitidos = new Set(
+            regionalesEncontradas.map((regional) =>
+              regional.nombre.trim().toLowerCase()
+            )
+          )
+          if (
+            sedesEncontradas.some(
+              (s) =>
+                !s.regional ||
+                !nombresPermitidos.has(s.regional.trim().toLowerCase())
+            )
+          ) {
+            erroresReferencia.push(
+              "Las sedes deben pertenecer a alguna de las regionales seleccionadas"
+            )
+            camposErroneos.push("sede_ids")
+          }
         }
       }
 
@@ -255,14 +298,46 @@ export async function POST(req: NextRequest) {
         continue
       }
 
+      // Regional principal heredada (primera distinta de Nacional; si solo está
+      // Nacional, se conserva Nacional).
+      const regionalPrincipalId = [...regionalesEncontradas].sort((a, b) => {
+        const nacionalA = esRegionalNacional(a.nombre) ? 1 : 0
+        const nacionalB = esRegionalNacional(b.nombre) ? 1 : 0
+        if (nacionalA !== nacionalB) return nacionalA - nacionalB
+        return a.nombre.localeCompare(b.nombre, "es")
+      })[0]?.id
+
+      const poblacionTotal = datos.valores.length
+        ? datos.valores.reduce((total, valor) => total + (valor.poblacion ?? 0), 0)
+        : datos.poblacion_total
+      const valorTotal = datos.valores.length
+        ? datos.valores.reduce((total, valor) => total + (valor.valor_total ?? 0), 0)
+        : datos.valor_total
+
       // Insertar contrato
       const { data: contratoInsertado, error: errorInsert } = await admin.from("contratos").insert({
-        ...datos,
-        sede_ids: undefined,
-        programa_ids: undefined,
-        valores: undefined,
+        nombre: datos.nombre,
+        asegurador_id: datos.asegurador_id,
+        numero_contrato: datos.numero_contrato,
+        regional_id: regionalPrincipalId,
+        ciudad: datos.ciudad,
+        modalidad: datos.modalidad,
+        responsable_id: datos.responsable_id,
+        categoria_contrato_id: datos.categoria_contrato_id,
+        tipo_contrato_id: datos.tipo_contrato_id,
+        estado_legalizacion_id: datos.estado_legalizacion_id,
+        estado_ejecucion_id: datos.estado_ejecucion_id,
+        fecha_inicio: datos.fecha_inicio,
+        fecha_fin: datos.fecha_fin,
+        prorroga_automatica: datos.prorroga_automatica,
+        periodicidad: datos.periodicidad,
+        poblacion_total: poblacionTotal,
+        valor_total: valorTotal,
+        valor_percapita_manual: datos.valor_percapita_manual,
+        tiene_programas: datos.tiene_programas,
+        url_ubicacion: datos.url_ubicacion,
+        notas: datos.notas,
         estado: "activo",
-        // Nota: no tenemos created_by real del archivo; usar usuario anon por defecto o dejarlo vacío. Como la tabla puede requerirlo, verifico estructura.
       } as any).select("id").single()
 
       if (errorInsert || !contratoInsertado) {
@@ -273,6 +348,22 @@ export async function POST(req: NextRequest) {
       }
 
       const contratoId = contratoInsertado.id
+
+      // Insertar regionales
+      const { error: errorRegionales } = await admin
+        .from("contrato_regionales")
+        .insert(
+          regionalIds.map((regionalId) => ({
+            contrato_id: contratoId,
+            regional_id: regionalId,
+          }))
+        )
+      if (errorRegionales) {
+        resultados.rechazados++
+        resultados.errores.push({ fila: filaNum, motivo: `Error en regionales: ${errorRegionales.message}`, campos: ["regional_ids"] })
+        resultados.detalles.push({ fila: filaNum, numero_contrato: datos.numero_contrato, creado: false, mensaje: `Error en regionales: ${errorRegionales.message}` })
+        continue
+      }
 
       // Insertar sedes
       const insertSedes = datos.sede_ids.map((sedeId: string) => ({ contrato_id: contratoId, sede_id: sedeId }))

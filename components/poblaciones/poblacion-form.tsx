@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 
 type PoblacionFormProps =
   | { mode: "crear"; opciones: PoblacionOpciones }
@@ -46,23 +47,32 @@ export function PoblacionForm(props: PoblacionFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: PoblacionInput = {
+    sede_id: poblacion?.sede_id ?? opciones.sedes[0]?.id ?? "",
+    asegurador_eps_id:
+      poblacion?.asegurador_eps_id ?? opciones.aseguradores[0]?.id ?? "",
+    regimen_id: poblacion?.regimen_id ?? opciones.regimenes[0]?.id ?? "",
+    poblacion_activa: poblacion?.poblacion_activa ?? 0,
+    poblacion_pagada: poblacion?.poblacion_pagada ?? 0,
+    poblacion_certificada: poblacion?.poblacion_certificada ?? 0,
+    fecha_actualizacion: poblacion?.fecha_actualizacion ?? hoy(),
+  }
+
+  const form = useForm<PoblacionInput>({
+    resolver: zodResolver(poblacionSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     register,
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<PoblacionInput>({
-    resolver: zodResolver(poblacionSchema),
-    defaultValues: {
-      sede_id: poblacion?.sede_id ?? opciones.sedes[0]?.id ?? "",
-      asegurador_eps_id:
-        poblacion?.asegurador_eps_id ?? opciones.aseguradores[0]?.id ?? "",
-      regimen_id: poblacion?.regimen_id ?? opciones.regimenes[0]?.id ?? "",
-      poblacion_activa: poblacion?.poblacion_activa ?? 0,
-      poblacion_pagada: poblacion?.poblacion_pagada ?? 0,
-      poblacion_certificada: poblacion?.poblacion_certificada ?? 0,
-      fecha_actualizacion: poblacion?.fecha_actualizacion ?? hoy(),
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: PoblacionInput) {

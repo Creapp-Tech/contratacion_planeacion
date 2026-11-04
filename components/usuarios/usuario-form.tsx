@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { ESTADO_VALUES, ROLES, ROL_VALUES } from "@/lib/constants/roles"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type { Regional, UsuarioRow } from "@/lib/usuarios/queries"
 
 const SIN_REGIONAL = "__sin_regional__"
@@ -74,17 +75,19 @@ export function UsuarioForm(props: UsuarioFormProps) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
+  const valoresIniciales: FormValues = {
+    email: usuario?.email ?? "",
+    nombre_completo: usuario?.nombre_completo ?? "",
+    telefono: usuario?.telefono ?? "",
+    rol: (usuario?.rol as FormValues["rol"]) ?? "analista_contratacion",
+    regional_id: usuario?.regional_id ?? "",
+    estado: (usuario?.estado as FormValues["estado"]) ?? "activo",
+    password: "",
+  }
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: usuario?.email ?? "",
-      nombre_completo: usuario?.nombre_completo ?? "",
-      telefono: usuario?.telefono ?? "",
-      rol: (usuario?.rol as FormValues["rol"]) ?? "analista_contratacion",
-      regional_id: usuario?.regional_id ?? "",
-      estado: (usuario?.estado as FormValues["estado"]) ?? "activo",
-      password: "",
-    },
+    defaultValues: valoresIniciales,
   })
 
   const {
@@ -94,6 +97,12 @@ export function UsuarioForm(props: UsuarioFormProps) {
     setError,
     formState: { errors, isSubmitting },
   } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
+    setShowPassword(false)
+  })
 
   const rol = useWatch({ control, name: "rol" })
   const regionalRequerida = rol === "gerente_regional"

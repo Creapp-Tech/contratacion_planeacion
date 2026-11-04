@@ -41,6 +41,14 @@ export const PERIODICIDADES = [
 // Historial.
 export const ESTADO_EJECUCION_EN_EJECUCION = "En ejecución"
 
+// Nombre exacto de la regional especial que permite elegir sedes puntuales de
+// cualquier regional. Es excluyente: no se puede combinar con otras regionales.
+export const REGIONAL_NACIONAL = "Nacional"
+
+export function esRegionalNacional(nombre: string | null | undefined): boolean {
+  return (nombre ?? "").trim().toLowerCase() === REGIONAL_NACIONAL.toLowerCase()
+}
+
 export type Periodicidad = (typeof PERIODICIDADES)[number]["value"]
 
 export const PERIODICIDAD_VALUES: [Periodicidad, ...Periodicidad[]] = [

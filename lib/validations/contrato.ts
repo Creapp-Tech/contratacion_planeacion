@@ -43,7 +43,9 @@ export const contratoSchema = z
       .trim()
       .min(1, "Ingresa el número de contrato")
       .max(100, "El número de contrato es demasiado largo"),
-    regional_id: z.string().uuid("Selecciona la regional"),
+    regional_ids: z
+      .array(z.string().uuid("Selecciona una regional válida"))
+      .min(1, "Selecciona al menos una regional"),
     ciudad: z
       .string()
       .trim()
@@ -127,6 +129,14 @@ export const contratoSchema = z
         code: "custom",
         path: ["sede_ids"],
         message: "Selecciona al menos una sede",
+      })
+    }
+
+    if (new Set(data.regional_ids).size !== data.regional_ids.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["regional_ids"],
+        message: "No puedes repetir una regional",
       })
     }
 

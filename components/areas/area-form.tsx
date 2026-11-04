@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type { Area, GrupoArea } from "@/lib/areas/queries"
 import { areaSchema } from "@/lib/validations/area"
 
@@ -45,19 +46,30 @@ export function AreaForm(props: AreaFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: FormValues = {
+    categoria: area?.categoria ?? "",
+    nombre: area?.nombre ?? "",
+    medida: area?.medida ?? 1,
+    mide_capacidad_ocupacion: area?.mide_capacidad_ocupacion ?? false,
+  }
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(areaSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(areaSchema),
-    defaultValues: {
-      categoria: area?.categoria ?? "",
-      nombre: area?.nombre ?? "",
-      medida: area?.medida ?? 1,
-      mide_capacidad_ocupacion: area?.mide_capacidad_ocupacion ?? false,
-    },
+  } = form
+
+  // Al ocultarse la ruta (Activity) o desmontarse, vuelve a los valores
+  // iniciales del modo actual y limpia errores/banderas.
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: FormValues) {

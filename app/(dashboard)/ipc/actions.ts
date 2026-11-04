@@ -37,7 +37,22 @@ function mensajeError(error: SupabaseError) {
 
 type ContratoValidado = {
   id: string
-  regional_id: string
+}
+
+async function contratoPerteneceARegional(
+  contratoId: string,
+  regionalId: string
+): Promise<boolean> {
+  const { data, error } = await createAdminClient()
+    .from("contrato_regionales")
+    .select("contrato_id")
+    .eq("contrato_id", contratoId)
+    .eq("regional_id", regionalId)
+    .maybeSingle()
+
+  if (error) throw error
+
+  return Boolean(data)
 }
 
 async function validarContrato(
@@ -46,7 +61,7 @@ async function validarContrato(
 ): Promise<{ error: string } | { contrato: ContratoValidado }> {
   const { data, error } = await createAdminClient()
     .from("contratos")
-    .select("id, estado, regional_id")
+    .select("id, estado")
     .eq("id", contratoId)
     .maybeSingle()
 
@@ -56,19 +71,29 @@ async function validarContrato(
     return { error: "El contrato seleccionado no existe" }
   }
 
-  const contrato = data as { id: string; estado: string; regional_id: string }
+  const contrato = data as { id: string; estado: string }
 
   if (contrato.estado !== "activo") {
     return { error: "El contrato seleccionado no está activo" }
   }
 
-  if (!alcance.verTodo && contrato.regional_id !== alcance.regionalId) {
-    return {
-      error: "Solo puedes registrar IPC de contratos de tu regional",
+  if (!alcance.verTodo) {
+    if (!alcance.regionalId) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
+
+    const pertenece = await contratoPerteneceARegional(
+      contrato.id,
+      alcance.regionalId
+    )
+    if (!pertenece) {
+      return {
+        error: "Solo puedes registrar IPC de contratos de tu regional",
+      }
     }
   }
 
-  return { contrato: { id: contrato.id, regional_id: contrato.regional_id } }
+  return { contrato: { id: contrato.id } }
 }
 
 async function validarRegistroEnAlcance(
@@ -79,19 +104,27 @@ async function validarRegistroEnAlcance(
 
   const { data, error } = await createAdminClient()
     .from("ipc_seguimiento")
-    .select("id, contratos!inner(regional_id)")
+    .select("id, contrato_id")
     .eq("id", id)
     .maybeSingle()
 
   if (error) throw error
   if (!data) return { error: "El registro IPC no existe" }
 
-  const contrato = (
-    data as unknown as { contratos: { regional_id: string } }
-  ).contratos
+  const registro = data as { id: string; contrato_id: string }
 
-  if (!alcance.verTodo && contrato.regional_id !== alcance.regionalId) {
-    return { error: "Solo puedes modificar registros IPC de tu regional" }
+  if (!alcance.verTodo) {
+    if (!alcance.regionalId) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
+
+    const pertenece = await contratoPerteneceARegional(
+      registro.contrato_id,
+      alcance.regionalId
+    )
+    if (!pertenece) {
+      return { error: "Solo puedes modificar registros IPC de tu regional" }
+    }
   }
 
   return { ok: true }

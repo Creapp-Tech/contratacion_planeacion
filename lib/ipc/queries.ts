@@ -37,6 +37,35 @@ function esUuid(value: string | undefined | null): value is string {
   return typeof value === "string" && UUID_RE.test(value)
 }
 
+async function idsContratosDeRegional(regionalId: string): Promise<string[]> {
+  const { data, error } = await createAdminClient()
+    .from("contrato_regionales")
+    .select("contrato_id")
+    .eq("regional_id", regionalId)
+
+  if (error) throw error
+
+  return ((data ?? []) as { contrato_id: string }[]).map(
+    (fila) => fila.contrato_id
+  )
+}
+
+async function contratoPerteneceARegional(
+  contratoId: string,
+  regionalId: string
+): Promise<boolean> {
+  const { data, error } = await createAdminClient()
+    .from("contrato_regionales")
+    .select("contrato_id")
+    .eq("contrato_id", contratoId)
+    .eq("regional_id", regionalId)
+    .maybeSingle()
+
+  if (error) throw error
+
+  return Boolean(data)
+}
+
 export type AlcanceIpcQuery = {
   verTodo: boolean
   regionalId: string | null
@@ -180,9 +209,13 @@ export async function listIpc(
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) return []
-    query = query.eq("contratos.regional_id", alcance.regionalId)
+    const ids = await idsContratosDeRegional(alcance.regionalId)
+    if (ids.length === 0) return []
+    query = query.in("contrato_id", ids)
   } else if (esUuid(filtros.regional)) {
-    query = query.eq("contratos.regional_id", filtros.regional)
+    const ids = await idsContratosDeRegional(filtros.regional)
+    if (ids.length === 0) return []
+    query = query.in("contrato_id", ids)
   }
 
   if (esUuid(filtros.asegurador)) {
@@ -285,7 +318,9 @@ export async function listContratosIpc(
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) return []
-    query = query.eq("regional_id", alcance.regionalId)
+    const ids = await idsContratosDeRegional(alcance.regionalId)
+    if (ids.length === 0) return []
+    query = query.in("id", ids)
   }
 
   const { data, error } = await query.order("numero_contrato", {
@@ -339,8 +374,13 @@ export async function getIpcRegistro(
 
   if (fila.contratos.estado !== "activo") return null
 
-  if (!alcance.verTodo && fila.contratos.regional_id !== alcance.regionalId) {
-    return null
+  if (!alcance.verTodo) {
+    if (!alcance.regionalId) return null
+    const pertenece = await contratoPerteneceARegional(
+      fila.contrato_id,
+      alcance.regionalId
+    )
+    if (!pertenece) return null
   }
 
   const nacionalPorAnio = await mapaNacional([fila.anio])

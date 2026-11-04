@@ -90,6 +90,37 @@ export function ContratosTabla({
       render: (_value, row) => row.aseguradores_eps?.nombre_eps ?? "—",
     },
     {
+      header: "Regionales",
+      accessor: "regionales",
+      render: (_value, row) => {
+        const nombres = row.regionales
+          .map((regional) => regional.regionales?.nombre)
+          .filter((nombre): nombre is string => Boolean(nombre))
+          .sort((a, b) => a.localeCompare(b, "es"))
+
+        if (nombres.length === 0) return "—"
+
+        return (
+          <div className="flex max-w-56 flex-wrap gap-1">
+            {nombres.map((nombre) => (
+              <Badge key={nombre} variant="outline">
+                {nombre}
+              </Badge>
+            ))}
+          </div>
+        )
+      },
+    },
+    {
+      header: "Sedes",
+      accessor: "sedes_count",
+      render: (_value, row) => (
+        <Badge variant="secondary">
+          {row.sedes_count} sede{row.sedes_count === 1 ? "" : "s"}
+        </Badge>
+      ),
+    },
+    {
       header: "Vigencia",
       accessor: "vigencia",
       render: (_value, row) => {

@@ -20,6 +20,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import { PAIS_IPC_COMPARACION } from "@/lib/ipc/constantes"
 import type { IpcNacionalRow } from "@/lib/ipc/queries"
 import {
@@ -41,19 +42,28 @@ export function IpcNacionalForm(props: IpcNacionalFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales = {
+    pais: registro?.pais ?? PAIS_IPC_COMPARACION,
+    anio: registro?.anio ?? (props.mode === "crear" ? props.anioActual : 0),
+    porcentaje_ipc: registro?.porcentaje_ipc,
+    valor_upc_contributivo: registro?.valor_upc_contributivo,
+    valor_upc_subsidiado: registro?.valor_upc_subsidiado ?? undefined,
+  }
+
+  const form = useForm<IpcNacionalInput>({
+    resolver: zodResolver(ipcNacionalSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<IpcNacionalInput>({
-    resolver: zodResolver(ipcNacionalSchema),
-    defaultValues: {
-      pais: registro?.pais ?? PAIS_IPC_COMPARACION,
-      anio: registro?.anio ?? (props.mode === "crear" ? props.anioActual : 0),
-      porcentaje_ipc: registro?.porcentaje_ipc,
-      valor_upc_contributivo: registro?.valor_upc_contributivo,
-      valor_upc_subsidiado: registro?.valor_upc_subsidiado ?? undefined,
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: IpcNacionalInput) {

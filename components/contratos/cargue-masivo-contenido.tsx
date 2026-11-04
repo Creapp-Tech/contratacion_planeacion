@@ -4,12 +4,18 @@ import { useState, useCallback, useRef } from "react"
 import { DownloadIcon, UploadIcon, FileSpreadsheetIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 
 import { CargueMasivoForm } from "./cargue-masivo-form"
 
 export function CargueMasivoContenido() {
   const [archivo, setArchivo] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useResetOnHide(() => {
+    setArchivo(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  })
 
   const manejarDescarga = useCallback(async () => {
     const res = await fetch("/api/plantilla/plantilla-contratos")

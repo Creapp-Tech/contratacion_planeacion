@@ -8,6 +8,9 @@ import {
 } from "@/lib/auth/session"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
+  esRegionalNacional,
+} from "@/lib/contratos/constantes"
+import {
   contratoSchema,
   type ContratoInput,
 } from "@/lib/validations/contrato"
@@ -68,6 +71,56 @@ async function responsableValido(responsableId: string): Promise<boolean> {
   return true
 }
 
+type RegionalContrato = { id: string; nombre: string }
+
+async function cargarRegionales(
+  ids: string[]
+): Promise<RegionalContrato[]> {
+  const unicos = [...new Set(ids)]
+  if (unicos.length === 0) return []
+
+  const { data, error } = await createAdminClient()
+    .from("regionales")
+    .select("id, nombre")
+    .in("id", unicos)
+
+  if (error) throw error
+
+  return (data ?? []) as RegionalContrato[]
+}
+
+/**
+ * `contratos.regional_id` se conserva como "regional principal" para IPC, RLS y
+ * filtros heredados. Se elige la primera regional distinta de Nacional; si el
+ * contrato es sólo Nacional, se conserva Nacional.
+ */
+function regionalPrincipal(regionales: RegionalContrato[]): string {
+  const ordenadas = [...regionales].sort((a, b) => {
+    const nacionalA = esRegionalNacional(a.nombre) ? 1 : 0
+    const nacionalB = esRegionalNacional(b.nombre) ? 1 : 0
+    if (nacionalA !== nacionalB) return nacionalA - nacionalB
+    return a.nombre.localeCompare(b.nombre, "es")
+  })
+
+  return ordenadas[0].id
+}
+
+async function contratoPerteneceARegional(
+  contratoId: string,
+  regionalId: string
+): Promise<boolean> {
+  const { data, error } = await createAdminClient()
+    .from("contrato_regionales")
+    .select("contrato_id")
+    .eq("contrato_id", contratoId)
+    .eq("regional_id", regionalId)
+    .maybeSingle()
+
+  if (error) throw error
+
+  return Boolean(data)
+}
+
 async function validarReferencias(
   datos: ContratoInput
 ): Promise<string | null> {
@@ -83,14 +136,18 @@ async function validarReferencias(
   if (errorAsegurador) throw errorAsegurador
   if (!asegurador) return "El asegurador seleccionado no está disponible"
 
-  const { data: regional, error: errorRegional } = await admin
-    .from("regionales")
-    .select("id, nombre")
-    .eq("id", datos.regional_id)
-    .maybeSingle()
+  const regionales = await cargarRegionales(datos.regional_ids)
+  if (regionales.length !== new Set(datos.regional_ids).size) {
+    return "Alguna de las regionales seleccionadas no está disponible"
+  }
 
-  if (errorRegional) throw errorRegional
-  if (!regional) return "La regional seleccionada no está disponible"
+  const esNacional = regionales.some((regional) =>
+    esRegionalNacional(regional.nombre)
+  )
+
+  if (esNacional && regionales.length > 1) {
+    return "La regional Nacional no se puede combinar con otras regionales"
+  }
 
   const sedeIds = [...new Set(datos.sede_ids)]
   if (sedeIds.length === 0) return "Selecciona al menos una sede"
@@ -116,16 +173,20 @@ async function validarReferencias(
     return "Todas las sedes deben estar activas"
   }
 
-  const regionalNombre = (regional as { nombre: string }).nombre
-    .trim()
-    .toLowerCase()
-
-  if (
-    sedesEncontradas.some(
-      (sede) => (sede.regional ?? "").trim().toLowerCase() !== regionalNombre
+  if (!esNacional) {
+    const nombresPermitidos = new Set(
+      regionales.map((regional) => regional.nombre.trim().toLowerCase())
     )
-  ) {
-    return "Todas las sedes deben pertenecer a la regional del contrato"
+
+    if (
+      sedesEncontradas.some(
+        (sede) =>
+          !sede.regional ||
+          !nombresPermitidos.has(sede.regional.trim().toLowerCase())
+      )
+    ) {
+      return "Todas las sedes deben pertenecer a alguna de las regionales del contrato"
+    }
   }
 
   const opcionesEsperadas: {
@@ -225,7 +286,10 @@ async function validarReferencias(
   return null
 }
 
-function prepararContrato(input: ContratoInput) {
+function prepararContrato(
+  input: ContratoInput,
+  regionalPrincipalId: string
+) {
   const poblacionTotal = input.valores.length
     ? input.valores.reduce((total, valor) => total + (valor.poblacion ?? 0), 0)
     : input.poblacion_total
@@ -238,7 +302,7 @@ function prepararContrato(input: ContratoInput) {
     nombre: input.nombre,
     asegurador_id: input.asegurador_id,
     numero_contrato: input.numero_contrato,
-    regional_id: input.regional_id,
+    regional_id: regionalPrincipalId,
     ciudad: input.ciudad,
     modalidad: input.modalidad,
     responsable_id: input.responsable_id,
@@ -265,8 +329,19 @@ async function guardarRelaciones(
 ): Promise<string | null> {
   const admin = createAdminClient()
 
+  const { error: errorRegionales } = await admin
+    .from("contrato_regionales")
+    .insert(
+      [...new Set(input.regional_ids)].map((regionalId) => ({
+        contrato_id: contratoId,
+        regional_id: regionalId,
+      }))
+    )
+
+  if (errorRegionales) return mensajeError(errorRegionales)
+
   const { error: errorSedes } = await admin.from("contratos_sedes").insert(
-    input.sede_ids.map((sedeId) => ({
+    [...new Set(input.sede_ids)].map((sedeId) => ({
       contrato_id: contratoId,
       sede_id: sedeId,
     }))
@@ -316,13 +391,17 @@ export async function crearContrato(
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" }
   }
 
-  const datos = { ...parsed.data }
+  const datos = {
+    ...parsed.data,
+    regional_ids: [...new Set(parsed.data.regional_ids)],
+    sede_ids: [...new Set(parsed.data.sede_ids)],
+  }
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) {
       return { error: "Tu usuario no tiene una regional asignada" }
     }
-    datos.regional_id = alcance.regionalId
+    datos.regional_ids = [alcance.regionalId]
   }
 
   if (!(await responsableValido(datos.responsable_id))) {
@@ -338,7 +417,13 @@ export async function crearContrato(
 
   if (errorReferencias) return { error: errorReferencias }
 
-  const fila = prepararContrato(datos)
+  let fila: ReturnType<typeof prepararContrato>
+  try {
+    const regionales = await cargarRegionales(datos.regional_ids)
+    fila = prepararContrato(datos, regionalPrincipal(regionales))
+  } catch {
+    return { error: "No se pudieron validar las regionales del contrato" }
+  }
 
   const { data, error } = await createAdminClient()
     .from("contratos")
@@ -382,26 +467,45 @@ export async function actualizarContrato(
   const admin = createAdminClient()
   const { data: actual, error: errorActual } = await admin
     .from("contratos")
-    .select("id, regional_id")
+    .select("id")
     .eq("id", id)
     .maybeSingle()
 
   if (errorActual) return { error: errorActual.message }
   if (!actual) return { error: "El contrato no existe" }
 
-  const regionalActual = (actual as { regional_id: string }).regional_id
-
-  if (!alcance.verTodo && regionalActual !== alcance.regionalId) {
-    return { error: "Solo puedes gestionar contratos de tu regional" }
-  }
-
-  const datos = { ...parsed.data }
-
   if (!alcance.verTodo) {
-    if (!alcance.regionalId) {
+    const regionalId = alcance.regionalId
+    if (!regionalId) {
       return { error: "Tu usuario no tiene una regional asignada" }
     }
-    datos.regional_id = alcance.regionalId
+
+    const pertenece = await contratoPerteneceARegional(id, regionalId)
+    if (!pertenece) {
+      return { error: "Solo puedes gestionar contratos de tu regional" }
+    }
+  }
+
+  const datos = {
+    ...parsed.data,
+    regional_ids: [...new Set(parsed.data.regional_ids)],
+    sede_ids: [...new Set(parsed.data.sede_ids)],
+  }
+
+  if (!alcance.verTodo && alcance.regionalId) {
+    // Un gerente regional puede editar contratos compartidos, pero no debe
+    // reescribir el alcance territorial: se conservan los vínculos actuales y
+    // sólo se validan las sedes contra ellos.
+    const { data: vinculos, error: errorVinculos } = await admin
+      .from("contrato_regionales")
+      .select("regional_id")
+      .eq("contrato_id", id)
+
+    if (errorVinculos) return { error: errorVinculos.message }
+
+    datos.regional_ids = (vinculos ?? []).map(
+      (vinculo) => (vinculo as { regional_id: string }).regional_id
+    )
   }
 
   if (!(await responsableValido(datos.responsable_id))) {
@@ -417,11 +521,18 @@ export async function actualizarContrato(
 
   if (errorReferencias) return { error: errorReferencias }
 
-  const fila = prepararContrato(datos)
+  let fila: ReturnType<typeof prepararContrato>
+  try {
+    const regionales = await cargarRegionales(datos.regional_ids)
+    fila = prepararContrato(datos, regionalPrincipal(regionales))
+  } catch {
+    return { error: "No se pudieron validar las regionales del contrato" }
+  }
 
   const { error } = await admin.rpc("actualizar_contrato_completo", {
     p_id: id,
     p_datos: fila,
+    p_regional_ids: datos.regional_ids,
     p_sede_ids: datos.sede_ids,
     p_programa_ids: datos.tiene_programas ? datos.programa_ids : [],
     p_valores: datos.valores,
@@ -445,17 +556,22 @@ export async function duplicarContrato(
   const admin = createAdminClient()
   const { data: actual, error: errorActual } = await admin
     .from("contratos")
-    .select("id, regional_id")
+    .select("id")
     .eq("id", id)
     .maybeSingle()
 
   if (errorActual) return { error: errorActual.message }
   if (!actual) return { error: "El contrato no existe" }
 
-  const regionalActual = (actual as { regional_id: string }).regional_id
+  if (!alcance.verTodo) {
+    if (!alcance.regionalId) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
 
-  if (!alcance.verTodo && regionalActual !== alcance.regionalId) {
-    return { error: "Solo puedes duplicar contratos de tu regional" }
+    const pertenece = await contratoPerteneceARegional(id, alcance.regionalId)
+    if (!pertenece) {
+      return { error: "Solo puedes duplicar contratos de tu regional" }
+    }
   }
 
   const { data, error } = await admin.rpc("duplicar_contrato", {
@@ -481,17 +597,22 @@ export async function eliminarContrato(
   const admin = createAdminClient()
   const { data: actual, error: errorActual } = await admin
     .from("contratos")
-    .select("id, regional_id")
+    .select("id")
     .eq("id", id)
     .maybeSingle()
 
   if (errorActual) return { error: errorActual.message }
   if (!actual) return { error: "El contrato no existe" }
 
-  const regionalActual = (actual as { regional_id: string }).regional_id
+  if (!alcance.verTodo) {
+    if (!alcance.regionalId) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
 
-  if (!alcance.verTodo && regionalActual !== alcance.regionalId) {
-    return { error: "Solo puedes gestionar contratos de tu regional" }
+    const pertenece = await contratoPerteneceARegional(id, alcance.regionalId)
+    if (!pertenece) {
+      return { error: "Solo puedes gestionar contratos de tu regional" }
+    }
   }
 
   const { error } = await admin
@@ -529,14 +650,24 @@ export async function crearDocumentoContrato(
   const admin = createAdminClient()
   const { data: contratoBase, error: errorContrato } = await admin
     .from("contratos")
-    .select("id, regional_id, valor_total")
+    .select("id, valor_total")
     .eq("id", contratoId)
     .maybeSingle()
   if (errorContrato) return { error: errorContrato.message }
   if (!contratoBase) return { error: "El contrato no existe" }
-  const regionalContr = (contratoBase as { regional_id: string }).regional_id
-  if (!alcance.verTodo && regionalContr !== alcance.regionalId) {
-    return { error: "Solo puedes gestionar contratos de tu regional" }
+
+  if (!alcance.verTodo) {
+    if (!alcance.regionalId) {
+      return { error: "Tu usuario no tiene una regional asignada" }
+    }
+
+    const pertenece = await contratoPerteneceARegional(
+      contratoId,
+      alcance.regionalId
+    )
+    if (!pertenece) {
+      return { error: "Solo puedes gestionar contratos de tu regional" }
+    }
   }
 
   const parsed = contratoSchema.safeParse({ ...input, contrato_id: contratoId })
@@ -627,12 +758,17 @@ export async function crearDocumentoContrato(
     const documentoId = (docData as { id: string }).id
 
     // Actualizar el contrato con los nuevos valores del documento
-    const filaContrato = prepararContrato(datos)
+    const regionalesDocumento = await cargarRegionales(datos.regional_ids)
+    const filaContrato = prepararContrato(
+      datos,
+      regionalPrincipal(regionalesDocumento)
+    )
     const { error: errorActualizacion } = await admin.rpc(
       "actualizar_contrato_completo",
       {
         p_id: contratoId,
         p_datos: filaContrato,
+        p_regional_ids: datos.regional_ids,
         p_sede_ids: datos.sede_ids,
         p_programa_ids: datos.tiene_programas ? datos.programa_ids : [],
         p_valores: datos.valores,

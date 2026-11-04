@@ -10,7 +10,13 @@ import {
   useWatch,
 } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react"
+import {
+  CheckIcon,
+  Loader2Icon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react"
 import { cn } from "cn"
 
 import {
@@ -55,15 +61,19 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import {
   calcularContrato,
+  esRegionalNacional,
   formatearMoneda,
   MODALIDADES,
   PERIODICIDADES,
   type Modalidad,
   type Periodicidad,
 } from "@/lib/contratos/constantes"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type {
   ContratoDetalle,
   OpcionesContrato,
+  RegionalOpcion,
+  SedeOpcion,
 } from "@/lib/contratos/queries"
 import {
   contratoSchema,
@@ -92,6 +102,274 @@ function aNumeroONull(value: string) {
   return value === "" ? null : Number(value)
 }
 
+const TODAS_LAS_REGIONALES = "__todas__"
+const SEDES_SIN_REGIONAL = "__sin_regional__"
+
+type SedeSelectorProps = {
+  sedes: SedeOpcion[]
+  regionales: RegionalOpcion[]
+  value: string[]
+  onChange: (value: string[]) => void
+  esNacional: boolean
+  disabled?: boolean
+}
+
+/**
+ * Selector de sedes con búsqueda y filtro por regional.
+ *
+ * - Con regionales concretas solo se listan las sedes de esas regionales.
+ * - Con `Nacional` se listan todas las sedes (incluidas las que no tienen
+ *   regional) y se puede filtrar por regional o por "sin regional".
+ * - "Seleccionar todas" y "Limpiar" actúan sobre las sedes visibles (filtro +
+ *   búsqueda), para que sean predecibles con contratos grandes.
+ */
+function SedeSelector({
+  sedes,
+  regionales,
+  value,
+  onChange,
+  esNacional,
+  disabled = false,
+}: SedeSelectorProps) {
+  const [busqueda, setBusqueda] = useState("")
+  const [filtroRegional, setFiltroRegional] = useState(TODAS_LAS_REGIONALES)
+
+  const sedesFiltradas = useMemo(() => {
+    const termino = busqueda.trim().toLowerCase()
+
+    return sedes.filter((sede) => {
+      if (esNacional && filtroRegional !== TODAS_LAS_REGIONALES) {
+        if (filtroRegional === SEDES_SIN_REGIONAL) {
+          if (sede.regional_id) return false
+        } else if (sede.regional_id !== filtroRegional) {
+          return false
+        }
+      }
+
+      if (!termino) return true
+
+      return [sede.nombre, sede.municipio ?? "", sede.regional ?? ""].some(
+        (valor) => valor.toLowerCase().includes(termino)
+      )
+    })
+  }, [sedes, esNacional, filtroRegional, busqueda])
+
+  const seleccionados = new Set(value)
+  const visiblesSeleccionados = sedesFiltradas.filter((sede) =>
+    seleccionados.has(sede.id)
+  )
+
+  const filtrosRegionales = useMemo(
+    () =>
+      regionales.map((regional) => ({
+        value: regional.id,
+        label: regional.nombre,
+      })),
+    [regionales]
+  )
+
+  function alternar(sedeId: string) {
+    if (disabled) return
+    onChange(
+      seleccionados.has(sedeId)
+        ? value.filter((id) => id !== sedeId)
+        : [...value, sedeId]
+    )
+  }
+
+  function seleccionarTodas() {
+    const siguiente = new Set(value)
+    for (const sede of sedesFiltradas) siguiente.add(sede.id)
+    onChange([...siguiente])
+  }
+
+  function limpiar() {
+    if (esNacional && filtroRegional !== TODAS_LAS_REGIONALES) {
+      const visibles = new Set(sedesFiltradas.map((sede) => sede.id))
+      onChange(value.filter((id) => !visibles.has(id)))
+      return
+    }
+    onChange([])
+  }
+
+  if (disabled) {
+    if (value.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          El contrato no tiene sedes asociadas.
+        </p>
+      )
+    }
+
+    const porId = new Map(sedes.map((sede) => [sede.id, sede]))
+    const sedesDelContrato = value
+      .map((id) => porId.get(id))
+      .filter((sede): sede is SedeOpcion => Boolean(sede))
+
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-xs text-muted-foreground">
+          {value.length} sede{value.length === 1 ? "" : "s"} cubierta
+          {value.length === 1 ? "" : "s"}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {sedesDelContrato.map((sede) => (
+            <Link
+              key={sede.id}
+              href={`/sedes/${sede.id}`}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "h-auto py-1 text-xs"
+              )}
+            >
+              {sede.nombre}
+              {sede.regional ? (
+                <span className="ml-1 text-muted-foreground">
+                  · {sede.regional}
+                </span>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={busqueda}
+            onChange={(event) => setBusqueda(event.target.value)}
+            placeholder="Buscar sede por nombre, municipio o regional"
+            className="pl-9"
+            autoComplete="off"
+          />
+        </div>
+
+        {esNacional ? (
+          <Select
+            value={filtroRegional}
+            onValueChange={(value) =>
+              setFiltroRegional(value ?? TODAS_LAS_REGIONALES)
+            }
+            items={{
+              [TODAS_LAS_REGIONALES]: "Todas las regionales",
+              [SEDES_SIN_REGIONAL]: "Sin regional",
+              ...Object.fromEntries(
+                filtrosRegionales.map((regional) => [
+                  regional.value,
+                  regional.label,
+                ])
+              ),
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Filtrar por regional" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODAS_LAS_REGIONALES}>
+                Todas las regionales
+              </SelectItem>
+              <SelectItem value={SEDES_SIN_REGIONAL}>Sin regional</SelectItem>
+              {filtrosRegionales.map((regional) => (
+                <SelectItem key={regional.value} value={regional.value}>
+                  {regional.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">
+          {sedesFiltradas.length} sede{sedesFiltradas.length === 1 ? "" : "s"}{" "}
+          disponible{sedesFiltradas.length === 1 ? "" : "s"} ·{" "}
+          {visiblesSeleccionados.length} seleccionada
+          {visiblesSeleccionados.length === 1 ? "" : "s"} en la vista ·{" "}
+          {value.length} en total
+        </span>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={seleccionarTodas}
+            disabled={sedesFiltradas.length === 0}
+          >
+            Seleccionar todas
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={limpiar}
+            disabled={value.length === 0}
+          >
+            Limpiar
+          </Button>
+        </div>
+      </div>
+
+      {sedesFiltradas.length === 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          {sedes.length === 0
+            ? "No hay sedes activas para las regionales seleccionadas."
+            : "No hay sedes que coincidan con la búsqueda."}
+        </p>
+      ) : (
+        <div
+          role="group"
+          aria-label="Sedes cubiertas"
+          className="grid max-h-72 gap-1 overflow-y-auto sm:grid-cols-2"
+        >
+          {sedesFiltradas.map((sede) => {
+            const selected = seleccionados.has(sede.id)
+            return (
+              <button
+                key={sede.id}
+                type="button"
+                role="checkbox"
+                aria-checked={selected}
+                onClick={() => alternar(sede.id)}
+                className={cn(
+                  "flex items-start gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                  selected
+                    ? "border-primary bg-primary/10"
+                    : "border-transparent hover:bg-muted"
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input"
+                  )}
+                  aria-hidden="true"
+                >
+                  {selected ? <CheckIcon className="h-3 w-3" /> : null}
+                </span>
+                <span className="flex flex-col">
+                  <span className="font-medium">{sede.nombre}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {[sede.municipio, sede.regional ?? "Sin regional"]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ContratoForm({
   mode,
   contrato,
@@ -111,13 +389,6 @@ export function ContratoForm({
     opciones.aseguradores.map((asegurador) => ({
       id: asegurador.id,
       label: asegurador.nombre_eps,
-    }))
-  )
-
-  const regionalesItems = opcionesItems(
-    opciones.regionales.map((regional) => ({
-      id: regional.id,
-      label: regional.nombre,
     }))
   )
 
@@ -156,56 +427,72 @@ export function ContratoForm({
     }))
   )
 
+  const regionalesIniciales =
+    contrato?.regionales.map((regional) => regional.regional_id) ??
+    (contrato?.regional_id
+      ? [contrato.regional_id]
+      : opciones.regionales.length === 1
+        ? [opciones.regionales[0].id]
+        : [])
+
+  const valoresIniciales: ContratoInput = {
+    nombre: contrato?.nombre ?? "",
+    asegurador_id: contrato?.asegurador_id ?? "",
+    numero_contrato: contrato?.numero_contrato ?? "",
+    regional_ids: regionalesIniciales,
+    ciudad: contrato?.ciudad ?? "",
+    modalidad: (contrato?.modalidad as Modalidad | undefined) ?? "capita",
+    responsable_id: contrato?.responsable_id ?? "",
+    categoria_contrato_id: contrato?.categoria_contrato_id ?? null,
+    tipo_contrato_id: contrato?.tipo_contrato_id ?? null,
+    estado_legalizacion_id: contrato?.estado_legalizacion_id ?? null,
+    estado_ejecucion_id: contrato?.estado_ejecucion_id ?? null,
+    fecha_inicio: contrato?.fecha_inicio ?? null,
+    fecha_fin: contrato?.fecha_fin ?? null,
+    prorroga_automatica: contrato?.prorroga_automatica ?? false,
+    periodicidad:
+      (contrato?.periodicidad as Periodicidad | undefined) ?? "mensual",
+    poblacion_total: contrato?.poblacion_total ?? null,
+    valor_total: contrato?.valor_total ?? null,
+    valor_percapita_manual: contrato?.valor_percapita_manual ?? null,
+    tiene_programas: contrato?.tiene_programas ?? false,
+    sede_ids: contrato?.sedes.map((sede) => sede.sede_id) ?? [],
+    programa_ids:
+      contrato?.programas.map((programa) => programa.opcion_id) ?? [],
+    valores:
+      contrato?.valores.map((valor) => ({
+        regimen_id: valor.regimen_id,
+        poblacion: valor.poblacion,
+        valor_total: valor.valor_total,
+        valor_percapita_manual: valor.valor_percapita_manual,
+      })) ?? [],
+    url_ubicacion: contrato?.url_ubicacion ?? null,
+    notas: contrato?.notas ?? null,
+    tipo_documento: null,
+    numero_documento: null,
+    fecha_otorgamiento: null,
+    archivo_url: null,
+    resumen_cambios: null,
+    contrato_id: contrato?.id ?? null,
+  }
+
+  const form = useForm<ContratoInput>({
+    resolver: zodResolver(contratoSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     control,
     register,
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<ContratoInput>({
-    resolver: zodResolver(contratoSchema),
-    defaultValues: {
-      nombre: contrato?.nombre ?? "",
-      asegurador_id: contrato?.asegurador_id ?? "",
-      numero_contrato: contrato?.numero_contrato ?? "",
-      regional_id:
-        contrato?.regional_id ??
-        (opciones.regionales.length === 1 ? opciones.regionales[0].id : ""),
-      ciudad: contrato?.ciudad ?? "",
-      modalidad: (contrato?.modalidad as Modalidad | undefined) ?? "capita",
-      responsable_id: contrato?.responsable_id ?? "",
-      categoria_contrato_id: contrato?.categoria_contrato_id ?? null,
-      tipo_contrato_id: contrato?.tipo_contrato_id ?? null,
-      estado_legalizacion_id: contrato?.estado_legalizacion_id ?? null,
-      estado_ejecucion_id: contrato?.estado_ejecucion_id ?? null,
-      fecha_inicio: contrato?.fecha_inicio ?? null,
-      fecha_fin: contrato?.fecha_fin ?? null,
-      prorroga_automatica: contrato?.prorroga_automatica ?? false,
-      periodicidad:
-        (contrato?.periodicidad as Periodicidad | undefined) ?? "mensual",
-      poblacion_total: contrato?.poblacion_total ?? null,
-      valor_total: contrato?.valor_total ?? null,
-      valor_percapita_manual: contrato?.valor_percapita_manual ?? null,
-      tiene_programas: contrato?.tiene_programas ?? false,
-      sede_ids: contrato?.sedes.map((sede) => sede.sede_id) ?? [],
-      programa_ids:
-        contrato?.programas.map((programa) => programa.opcion_id) ?? [],
-      valores:
-        contrato?.valores.map((valor) => ({
-          regimen_id: valor.regimen_id,
-          poblacion: valor.poblacion,
-          valor_total: valor.valor_total,
-          valor_percapita_manual: valor.valor_percapita_manual,
-        })) ?? [],
-      url_ubicacion: contrato?.url_ubicacion ?? null,
-      notas: contrato?.notas ?? null,
-      tipo_documento: null,
-      numero_documento: null,
-      fecha_otorgamiento: null,
-      archivo_url: null,
-      resumen_cambios: null,
-      contrato_id: contrato?.id ?? null,
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
+    setDiscriminarValores((contrato?.valores.length ?? 0) > 0)
   })
 
   const { fields, append, remove } = useFieldArray({
@@ -213,7 +500,8 @@ export function ContratoForm({
     name: "valores",
   })
 
-  const regionalId = useWatch({ control, name: "regional_id" })
+  const regionalIds = useWatch({ control, name: "regional_ids" }) ?? []
+  const sedanIdsSeleccionadas = useWatch({ control, name: "sede_ids" }) ?? []
   const periodicidad = useWatch({ control, name: "periodicidad" })
   const poblacionTotal = useWatch({ control, name: "poblacion_total" })
   const valorTotal = useWatch({ control, name: "valor_total" })
@@ -233,20 +521,84 @@ export function ContratoForm({
     }))
   )
 
-  const regionalNombre = useMemo(
-    () =>
-      opciones.regionales.find((regional) => regional.id === regionalId)
-        ?.nombre ?? null,
-    [opciones.regionales, regionalId]
-  )
-
-  const sedesDisponibles = useMemo(() => {
-    if (!regionalNombre) return []
-    const regionalObjetivo = regionalNombre.trim().toLowerCase()
-    return opciones.sedes.filter(
-      (sede) => sede.regional?.trim().toLowerCase() === regionalObjetivo
+  const esNacional = useMemo(() => {
+    if (regionalIds.length !== 1) return false
+    const regional = opciones.regionales.find(
+      (item) => item.id === regionalIds[0]
     )
-  }, [opciones.sedes, regionalNombre])
+    return esRegionalNacional(regional?.nombre)
+  }, [opciones.regionales, regionalIds])
+
+  /**
+   * Sedes elegibles según las regionales del contrato. Con `Nacional` se
+   * habilita cualquier sede (incluidas las que no tienen regional asignada).
+   */
+  const sedesPermitidas = useMemo(() => {
+    if (esNacional) return opciones.sedes
+
+    const seleccionadas = new Set(regionalIds)
+    return opciones.sedes.filter(
+      (sede) => sede.regional_id && seleccionadas.has(sede.regional_id)
+    )
+  }, [opciones.sedes, regionalIds, esNacional])
+
+  /**
+   * `Nacional` es excluyente: si se activa, reemplaza la selección; si ya está
+   * activa y se elige otra regional, se retira `Nacional`. Después se descartan
+   * las sedes que dejaron de ser válidas.
+   */
+  function cambiarRegionales(siguiente: string[]) {
+    if (readonly) return
+
+    const nacionalId = opciones.regionales.find((regional) =>
+      esRegionalNacional(regional.nombre)
+    )?.id
+
+    const previas = new Set(regionalIds)
+    let seleccion = siguiente
+
+    if (nacionalId) {
+      const agregoNacional =
+        siguiente.includes(nacionalId) && !previas.has(nacionalId)
+
+      if (agregoNacional) {
+        seleccion = [nacionalId]
+      } else if (
+        siguiente.includes(nacionalId) &&
+        siguiente.some((id) => id !== nacionalId)
+      ) {
+        seleccion = siguiente.filter((id) => id !== nacionalId)
+      }
+    }
+
+    seleccion = [...new Set(seleccion)]
+    setValue("regional_ids", seleccion, { shouldValidate: false })
+
+    const esNacionalNuevo =
+      seleccion.length === 1 &&
+      esRegionalNacional(
+        opciones.regionales.find((regional) => regional.id === seleccion[0])
+          ?.nombre
+      )
+
+    const permitidas = esNacionalNuevo
+      ? new Set(opciones.sedes.map((sede) => sede.id))
+      : new Set(
+          opciones.sedes
+            .filter(
+              (sede) =>
+                sede.regional_id && seleccion.includes(sede.regional_id)
+            )
+            .map((sede) => sede.id)
+        )
+
+    const sedesValidas = (sedanIdsSeleccionadas ?? []).filter((id) =>
+      permitidas.has(id)
+    )
+    if (sedesValidas.length !== sedanIdsSeleccionadas.length) {
+      setValue("sede_ids", sedesValidas, { shouldValidate: false })
+    }
+  }
 
   const calculos = useMemo(
     () =>
@@ -485,54 +837,46 @@ export function ContratoForm({
         </CardHeader>
         <CardContent>
           <FieldGroup className="gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field data-invalid={!!errors.regional_id}>
-                <FieldLabel>Regional</FieldLabel>
-                <Controller
-                  control={control}
-                  name="regional_id"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value)
-                        setValue("sede_ids", [])
-                      }}
-                      items={regionalesItems}
-                      disabled={readonly}
-                    >
-                      <SelectTrigger
-                        id="regional_id"
-                        className="w-full"
-                        aria-invalid={!!errors.regional_id}
-                      >
-                        <SelectValue placeholder="Selecciona la regional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {opciones.regionales.map((regional) => (
-                          <SelectItem key={regional.id} value={regional.id}>
-                            {regional.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldError errors={[errors.regional_id]} />
-              </Field>
+            <Field data-invalid={!!errors.regional_ids}>
+              <FieldLabel>Regionales del contrato</FieldLabel>
+              <Controller
+                control={control}
+                name="regional_ids"
+                render={({ field }) => (
+                  <MultiSelectChips
+                    options={opciones.regionales.map((regional) => ({
+                      value: regional.id,
+                      label: regional.nombre,
+                      hint: esRegionalNacional(regional.nombre)
+                        ? "excluyente"
+                        : undefined,
+                    }))}
+                    value={field.value ?? []}
+                    onChange={cambiarRegionales}
+                    disabled={readonly}
+                    emptyMessage="No hay regionales configuradas"
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Puedes asociar el contrato a una o varias regionales. La
+                regional Nacional es excluyente y permite elegir sedes de
+                cualquier regional.
+              </p>
+              <FieldError errors={[errors.regional_ids]} />
+            </Field>
 
-              <Field data-invalid={!!errors.ciudad}>
-                <FieldLabel htmlFor="ciudad">Ciudad</FieldLabel>
-                <Input
-                  id="ciudad"
-                  autoComplete="off"
-                  disabled={readonly}
-                  aria-invalid={!!errors.ciudad}
-                  {...register("ciudad")}
-                />
-                <FieldError errors={[errors.ciudad]} />
-              </Field>
-            </div>
+            <Field data-invalid={!!errors.ciudad}>
+              <FieldLabel htmlFor="ciudad">Ciudad</FieldLabel>
+              <Input
+                id="ciudad"
+                autoComplete="off"
+                disabled={readonly}
+                aria-invalid={!!errors.ciudad}
+                {...register("ciudad")}
+              />
+              <FieldError errors={[errors.ciudad]} />
+            </Field>
 
             <Field data-invalid={!!errors.responsable_id}>
               <FieldLabel>Responsable</FieldLabel>
@@ -573,28 +917,26 @@ export function ContratoForm({
 
             <Field data-invalid={!!errors.sede_ids}>
               <FieldLabel>Sedes cubiertas</FieldLabel>
-              {regionalId ? (
+              {regionalIds.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Selecciona al menos una regional para ver las sedes
+                  disponibles.
+                </p>
+              ) : (
                 <Controller
                   control={control}
                   name="sede_ids"
                   render={({ field }) => (
-                    <MultiSelectChips
-                      options={sedesDisponibles.map((sede) => ({
-                        value: sede.id,
-                        label: sede.nombre,
-                        hint: sede.municipio ?? undefined,
-                      }))}
+                    <SedeSelector
+                      sedes={sedesPermitidas}
+                      regionales={opciones.regionales}
                       value={field.value ?? []}
                       onChange={field.onChange}
+                      esNacional={esNacional}
                       disabled={readonly}
-                      emptyMessage="No hay sedes activas para la regional seleccionada"
                     />
                   )}
                 />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Selecciona una regional para ver las sedes disponibles.
-                </p>
               )}
               <FieldError errors={[errors.sede_ids]} />
             </Field>

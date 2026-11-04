@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import {
   InputGroup,
   InputGroupAddon,
@@ -74,6 +75,12 @@ export function LoginForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = form
+
+  useResetOnHide(() => {
+    form.reset({ usuario: "", password: "" })
+    setServerError(null)
+    setShowPassword(false)
+  })
 
   async function onSubmit(values: LoginInput) {
     setServerError(null)

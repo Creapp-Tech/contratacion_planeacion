@@ -27,7 +27,8 @@ const CAMPOS_CONTRATO = `
   notas,
   created_at,
   aseguradores_eps(nombre_eps),
-  regionales(nombre),
+  regionales:contrato_regionales(regional_id, regionales(id, nombre)),
+  sedes_count:contratos_sedes(count),
   categoria_contrato:catalogos_opciones!contratos_categoria_contrato_id_fkey(nombre),
   tipo_contrato:catalogos_opciones!contratos_tipo_contrato_id_fkey(nombre),
   estado_legalizacion:catalogos_opciones!contratos_estado_legalizacion_id_fkey(nombre),
@@ -60,6 +61,11 @@ function esUuid(value: string | undefined | null): value is string {
   return typeof value === "string" && UUID_RE.test(value)
 }
 
+export type ContratoRegional = {
+  regional_id: string
+  regionales: { id: string; nombre: string } | null
+}
+
 export type ContratoRow = {
   id: string
   nombre: string
@@ -86,7 +92,8 @@ export type ContratoRow = {
   notas: string | null
   created_at: string
   aseguradores_eps: { nombre_eps: string } | null
-  regionales: { nombre: string } | null
+  regionales: ContratoRegional[]
+  sedes_count: number
   responsable: { nombre: string } | null
   categoria_contrato: { nombre: string } | null
   tipo_contrato: { nombre: string } | null
@@ -168,6 +175,7 @@ export type SedeOpcion = {
   id: string
   nombre: string
   regional: string | null
+  regional_id: string | null
   municipio: string | null
 }
 
@@ -207,14 +215,23 @@ export async function getContrato(
 ): Promise<ContratoDetalle | null> {
   if (!esUuid(id)) return null
 
-  let query = createAdminClient()
+  const query = createAdminClient()
     .from("contratos")
     .select(CAMPOS_DETALLE_STR)
     .eq("id", id)
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) return null
-    query = query.eq("regional_id", alcance.regionalId)
+
+    const { data: vinculo, error: errorVinculo } = await createAdminClient()
+      .from("contrato_regionales")
+      .select("contrato_id")
+      .eq("contrato_id", id)
+      .eq("regional_id", alcance.regionalId)
+      .maybeSingle()
+
+    if (errorVinculo) throw errorVinculo
+    if (!vinculo) return null
   }
 
   const { data, error } = await query.maybeSingle()
@@ -222,7 +239,9 @@ export async function getContrato(
   if (error) throw error
   if (!data) return null
 
-  const detalle = data as unknown as ContratoDetalle
+  const detalle = normalizarFilaContrato(
+    data as unknown as ContratoDetalle
+  ) as ContratoDetalle
   const nombres = await obtenerNombresResponsables([detalle.responsable_id])
   return conNombreResponsable(detalle, nombres)
 }
@@ -272,6 +291,37 @@ function conNombreResponsable<T extends ContratoRow>(fila: T, nombres: Map<strin
   return { ...fila, responsable: nombre ? { nombre } : null }
 }
 
+type FilaConConteoSedes = {
+  sedes_count?: unknown
+}
+
+function normalizarFilaContrato<T extends FilaConConteoSedes>(
+  fila: T
+): Omit<T, "sedes_count"> & { sedes_count: number } {
+  const bruto = fila.sedes_count
+  const conteo = Array.isArray(bruto)
+    ? Number((bruto[0] as { count?: number } | undefined)?.count ?? 0)
+    : Number(bruto ?? 0)
+
+  return {
+    ...fila,
+    sedes_count: Number.isFinite(conteo) ? conteo : 0,
+  }
+}
+
+async function idsContratosDeRegional(regionalId: string): Promise<string[]> {
+  const { data, error } = await createAdminClient()
+    .from("contrato_regionales")
+    .select("contrato_id")
+    .eq("regional_id", regionalId)
+
+  if (error) throw error
+
+  return ((data ?? []) as { contrato_id: string }[]).map(
+    (fila) => fila.contrato_id
+  )
+}
+
 async function obtenerEstadoEnEjecucionId(): Promise<string> {
   const { data, error } = await createAdminClient()
     .from("catalogos_opciones")
@@ -315,9 +365,13 @@ export async function listContratos(
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) return []
-    query = query.eq("regional_id", alcance.regionalId)
+    const ids = await idsContratosDeRegional(alcance.regionalId)
+    if (ids.length === 0) return []
+    query = query.in("id", ids)
   } else if (esUuid(filtros.regional)) {
-    query = query.eq("regional_id", filtros.regional)
+    const ids = await idsContratosDeRegional(filtros.regional)
+    if (ids.length === 0) return []
+    query = query.in("id", ids)
   }
 
   if (esUuid(filtros.asegurador)) {
@@ -337,7 +391,9 @@ export async function listContratos(
 
   if (error) throw error
 
-  const filas = (data ?? []) as unknown as ContratoRow[]
+  const filas = ((data ?? []) as unknown as ContratoRow[]).map(
+    normalizarFilaContrato
+  )
   const nombres = await obtenerNombresResponsables(
     filas.map((fila) => fila.responsable_id)
   )
@@ -429,7 +485,8 @@ export async function listOpcionesContrato(
   if (sedesResult.error) throw sedesResult.error
 
   const aseguradores = (aseguradoresResult.data ?? []) as AseguradorOpcion[]
-  let regionales = (regionalesResult.data ?? []) as RegionalOpcion[]
+  const regionalesTodas = (regionalesResult.data ??
+    []) as RegionalOpcion[]
   const responsables = (responsablesResult.data ?? []) as ResponsableOpcion[]
   const categoriasData = (categorias.data ?? []) as CatalogoOpcion[]
   const tiposContratoData = (tiposContrato.data ?? []) as CatalogoOpcion[]
@@ -438,7 +495,27 @@ export async function listOpcionesContrato(
   const estadosEjecucionData = (estadosEjecucion.data ?? []) as CatalogoOpcion[]
   const programasData = (programas.data ?? []) as CatalogoOpcion[]
   const regimenesData = (regimenesResult.data ?? []) as RegimenOpcion[]
-  let sedesData = (sedesResult.data ?? []) as SedeOpcion[]
+
+  // `sedes.regional` guarda el nombre de la regional. Se resuelve su id contra
+  // la tabla `regionales` para que el formulario pueda filtrar por vínculo sin
+  // depender de comparaciones de texto.
+  const regionalPorNombre = new Map(
+    regionalesTodas.map((regional) => [
+      regional.nombre.trim().toLowerCase(),
+      regional.id,
+    ])
+  )
+
+  let sedesData: SedeOpcion[] = (
+    (sedesResult.data ?? []) as Omit<SedeOpcion, "regional_id">[]
+  ).map((sede) => ({
+    ...sede,
+    regional_id: sede.regional
+      ? regionalPorNombre.get(sede.regional.trim().toLowerCase()) ?? null
+      : null,
+  }))
+
+  let regionales = regionalesTodas
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) {

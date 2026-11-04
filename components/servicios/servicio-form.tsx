@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select"
 import type { Area } from "@/lib/areas/queries"
 import type { CatalogoItem } from "@/lib/catalogos/queries"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type { GrupoServicio, Servicio } from "@/lib/servicios/queries"
 
 const SIN_VALOR = "__sin_valor__"
@@ -97,23 +98,32 @@ export function ServicioForm({
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: FormValues = {
+    nombre: servicio?.nombre ?? "",
+    grupo_id: servicio?.grupo_id ?? "",
+    area_id: servicio?.area_id ?? "",
+    duracion_minutos:
+      servicio?.duracion_minutos != null
+        ? String(servicio.duracion_minutos)
+        : "",
+    tipo_personal: servicio?.tipo_personal ?? "",
+  }
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nombre: servicio?.nombre ?? "",
-      grupo_id: servicio?.grupo_id ?? "",
-      area_id: servicio?.area_id ?? "",
-      duracion_minutos:
-        servicio?.duracion_minutos != null
-          ? String(servicio.duracion_minutos)
-          : "",
-      tipo_personal: servicio?.tipo_personal ?? "",
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: FormValues) {

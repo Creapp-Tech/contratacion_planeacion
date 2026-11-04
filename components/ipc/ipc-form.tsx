@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { formatearPorcentaje } from "@/lib/ipc/constantes"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 import type {
   ContratoIpcOpcion,
   IpcConReferencia,
@@ -62,21 +63,25 @@ export function IpcForm({
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales = {
+    contrato_id: registro?.contrato_id ?? "",
+    anio: registro?.anio ?? anioActual ?? new Date().getFullYear(),
+    costo_usuario: registro?.costo_usuario,
+    porcentaje_ipc: registro?.porcentaje_ipc,
+  }
+
+  const form = useForm<IpcInput>({
+    resolver: zodResolver(ipcSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     control,
     register,
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<IpcInput>({
-    resolver: zodResolver(ipcSchema),
-    defaultValues: {
-      contrato_id: registro?.contrato_id ?? "",
-      anio: registro?.anio ?? anioActual ?? new Date().getFullYear(),
-      costo_usuario: registro?.costo_usuario,
-      porcentaje_ipc: registro?.porcentaje_ipc,
-    },
-  })
+  } = form
 
   const contratoId = useWatch({ control, name: "contrato_id" })
 
@@ -93,6 +98,12 @@ export function IpcForm({
   const [aseguradorSeleccionado, setAseguradorSeleccionado] = useState(
     registro?.contratos.asegurador_id ?? ""
   )
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
+    setAseguradorSeleccionado(registro?.contratos.asegurador_id ?? "")
+  })
 
   const contratosDisponibles = useMemo(
     () =>

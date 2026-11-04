@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useResetOnHide } from "@/hooks/use-reset-on-hide"
 
 type CatalogoFormProps =
   | { mode: "crear"; dominio: CatalogoDominio }
@@ -35,16 +36,25 @@ export function CatalogoForm(props: CatalogoFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const valoresIniciales: CatalogoInput = {
+    nombre: item?.nombre ?? "",
+    descripcion: item?.descripcion ?? "",
+  }
+
+  const form = useForm<CatalogoInput>({
+    resolver: zodResolver(catalogoSchema),
+    defaultValues: valoresIniciales,
+  })
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<CatalogoInput>({
-    resolver: zodResolver(catalogoSchema),
-    defaultValues: {
-      nombre: item?.nombre ?? "",
-      descripcion: item?.descripcion ?? "",
-    },
+  } = form
+
+  useResetOnHide(() => {
+    form.reset(valoresIniciales)
+    setServerError(null)
   })
 
   async function onSubmit(values: CatalogoInput) {
