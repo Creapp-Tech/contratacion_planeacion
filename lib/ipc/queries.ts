@@ -26,7 +26,7 @@ const CAMPOS_IPC = `
     estado,
     estado_ejecucion:catalogos_opciones!contratos_estado_ejecucion_id_fkey(nombre),
     aseguradores_eps(nombre_eps),
-    regionales(nombre)
+    regionales!contratos_regional_id_fkey(nombre)
   )
 `
 
@@ -95,8 +95,8 @@ export type IpcRow = {
   contrato_id: string
   anio: number
   costo_usuario: number
-  upc: number
-  upc_subsidiado: number
+  upc: number | null
+  upc_subsidiado: number | null
   porcentaje_ipc: number
   created_at: string
   contratos: ContratoIpc
@@ -152,8 +152,9 @@ function normalizarFila(fila: IpcRow): IpcRow {
     ...fila,
     anio: Number(fila.anio),
     costo_usuario: Number(fila.costo_usuario),
-    upc: Number(fila.upc),
-    upc_subsidiado: Number(fila.upc_subsidiado),
+    upc: fila.upc == null ? null : Number(fila.upc),
+    upc_subsidiado:
+      fila.upc_subsidiado == null ? null : Number(fila.upc_subsidiado),
     porcentaje_ipc: Number(fila.porcentaje_ipc),
   }
 }

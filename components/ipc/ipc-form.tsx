@@ -165,8 +165,8 @@ export function IpcForm({
         <CardHeader>
           <CardTitle className="font-heading">Datos del registro IPC</CardTitle>
           <CardDescription>
-            Selecciona el contrato y registra el costo usuario y el % IPC del año. Solo puede existir
-            un registro por contrato y año.
+            Selecciona el contrato y registra el costo usuario y el % IPC del año.
+            Solo puede existir un registro por contrato y año.
           </CardDescription>
         </CardHeader>
         <CardContent>
