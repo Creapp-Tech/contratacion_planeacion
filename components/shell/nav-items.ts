@@ -126,6 +126,12 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["superadmin"],
       },
       {
+        title: "CUPS",
+        href: "/configuracion/cups",
+        icon: FileText,
+        roles: ["superadmin"],
+      },
+      {
         title: "Regionales",
         href: "/configuracion/regionales",
         icon: Building2,
