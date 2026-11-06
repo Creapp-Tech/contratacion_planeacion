@@ -26,7 +26,7 @@ export default async function EditarContratoPage({
   const volverA = volverDesde((await searchParams).volver)
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex w-full flex-col gap-6 max-w-4xl mx-auto">
       <Link
         href={volverA}
         className={cn(

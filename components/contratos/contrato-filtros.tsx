@@ -3,56 +3,154 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
 import { Loader2Icon, SearchIcon, XIcon } from "lucide-react"
+import { Select as SelectPrimitive } from "@base-ui/react/select"
+import { CheckIcon, ChevronDownIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import type { ContratoFiltros, OpcionesContrato } from "@/lib/contratos/queries"
 
-const ALL = "__all__"
+const TODOS = "__todos__"
 
-type FiltroSelectProps = {
-  id: string
-  value: string | undefined
-  placeholder: string
-  items: Record<string, string>
-  options: { value: string; label: string }[]
-  onChange: (value: string | undefined) => void
+function idsReales(seleccion: string[], todosLosIds: string[]): string[] {
+  return seleccion.filter((v) => v !== TODOS)
 }
 
-function FiltroSelect({
+function estaTodoSeleccionado(
+  seleccion: string[],
+  todosLosIds: string[]
+): boolean {
+  return (
+    seleccion.includes(TODOS) ||
+    (seleccion.length > 0 &&
+      seleccion.length === todosLosIds.length &&
+      todosLosIds.every((id) => seleccion.includes(id)))
+  )
+}
+
+/**
+ * Dropdown múltiple para filtros. Permite seleccionar una o varias opciones
+ * e incluye una opción "Seleccionar todos" al inicio.
+ */
+function FiltroSelectMulti({
   id,
   value,
   placeholder,
   items,
   options,
   onChange,
-}: FiltroSelectProps) {
+  todosLosIds,
+  etiquetaTodos,
+}: {
+  id: string
+  value: string[]
+  placeholder: string
+  items: Record<string, string>
+  options: { value: string; label: string }[]
+  onChange: (ids: string[]) => void
+  todosLosIds: string[]
+  etiquetaTodos: string
+}) {
+  const [primitiveValue, setPrimitiveValue] = useState<string[]>(() =>
+    estaTodoSeleccionado(value, todosLosIds)
+      ? [TODOS, ...todosLosIds]
+      : value
+  )
+
+  const seleccionadaComoTodos = primitiveValue.includes(TODOS)
+
+  function handleValueChange(next: string[] | null) {
+    const arr = next ?? []
+
+    if (arr.includes(TODOS)) {
+      // El usuario tocó "Seleccionar todos": se selecciona todo el grupo.
+      const completo = [TODOS, ...todosLosIds]
+      setPrimitiveValue(completo)
+      onChange(todosLosIds)
+      return
+    }
+
+    setPrimitiveValue(arr)
+    onChange(arr)
+  }
+
+  const etiquetas = options
+    .filter((o) => o.value !== TODOS && primitiveValue.includes(o.value))
+    .map((o) => o.label)
+
+  const valorMostrado =
+    seleccionadaComoTodos || etiquetas.length === todosLosIds.length
+      ? etiquetaTodos
+      : etiquetas.length > 0
+        ? etiquetas.join(", ")
+      : placeholder
+
   return (
-    <Select
-      value={value ?? ALL}
-      onValueChange={(next) =>
-        onChange(next === ALL || next == null ? undefined : next)
-      }
+    <SelectPrimitive.Root
+      id={id}
+      multiple
+      value={primitiveValue}
+      onValueChange={handleValueChange}
       items={items}
     >
-      <SelectTrigger id={id} className="w-full sm:w-48">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      <SelectPrimitive.Trigger
+        className={cn(
+          "w-full flex items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          seleccionadaComoTodos ? "bg-accent text-accent-foreground" : ""
+        )}
+      >
+        <SelectPrimitive.Value className="flex flex-1 text-left">
+          {seleccionadaComoTodos || etiquetas.length > 0 ? (
+            valorMostrado
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+        </SelectPrimitive.Value>
+        <SelectPrimitive.Icon
+          render={
+            <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+          }
+        />
+      </SelectPrimitive.Trigger>
+
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Positioner className="isolate z-50">
+          <SelectPrimitive.Popup
+            className="relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-2xl bg-popover text-popover-foreground shadow-2xl ring-1 ring-foreground/5 data-[side=bottom]:slide-in-from-top-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+          >
+            <SelectPrimitive.List>
+              {options.map((option) => {
+                const seleccionado = primitiveValue.includes(option.value)
+                return (
+                  <SelectPrimitive.Item
+                    key={option.value}
+                    value={option.value}
+                    className={cn(
+                      "relative flex w-full cursor-default items-center gap-2.5 rounded-xl py-2 pr-8 pl-3 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                      seleccionado
+                        ? "bg-accent text-accent-foreground"
+                        : "text-popover-foreground"
+                    )}
+                  >
+                    <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-normal">
+                      {option.label}
+                    </SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemIndicator
+                      className="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+                    >
+                      {seleccionado ? (
+                        <CheckIcon className="pointer-events-none size-4" />
+                      ) : null}
+                    </SelectPrimitive.ItemIndicator>
+                  </SelectPrimitive.Item>
+                )
+              })}
+            </SelectPrimitive.List>
+          </SelectPrimitive.Popup>
+        </SelectPrimitive.Positioner>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   )
 }
 
@@ -71,6 +169,12 @@ export function ContratoFiltros({
   const [pending, startTransition] = useTransition()
   const [q, setQ] = useState(filtros.q ?? "")
   const [qPrevio, setQPrevio] = useState(filtros.q)
+  const [aseguradorSeleccionado, setAseguradorSeleccionado] = useState(
+    filtros.asegurador ?? []
+  )
+  const [regionalSeleccionada, setRegionalSeleccionada] = useState(
+    filtros.regional ?? []
+  )
 
   if (filtros.q !== qPrevio) {
     setQPrevio(filtros.q)
@@ -78,7 +182,7 @@ export function ContratoFiltros({
   }
 
   const aseguradorItems = Object.fromEntries([
-    [ALL, "Todos los aseguradores"],
+    [TODOS, "Seleccionar todos"],
     ...opciones.aseguradores.map((asegurador) => [
       asegurador.id,
       asegurador.nombre_eps,
@@ -86,33 +190,40 @@ export function ContratoFiltros({
   ])
 
   const aseguradorOptions = [
-    { value: ALL, label: "Todos los aseguradores" },
+    { value: TODOS, label: "Seleccionar todos" },
     ...opciones.aseguradores.map((asegurador) => ({
       value: asegurador.id,
       label: asegurador.nombre_eps,
     })),
   ]
 
+  const aseguradorIds = opciones.aseguradores.map((a) => a.id)
+
   const regionalItems = Object.fromEntries([
-    [ALL, "Todas las regionales"],
+    [TODOS, "Seleccionar todos"],
     ...opciones.regionales.map((regional) => [regional.id, regional.nombre]),
   ])
 
   const regionalOptions = [
-    { value: ALL, label: "Todas las regionales" },
+    { value: TODOS, label: "Seleccionar todos" },
     ...opciones.regionales.map((regional) => ({
       value: regional.id,
       label: regional.nombre,
     })),
   ]
 
-  function updateParams(next: Record<string, string | undefined>) {
+  const regionalIds = opciones.regionales.map((r) => r.id)
+
+  function updateParams(next: Record<string, string | string[] | undefined>) {
     const params = new URLSearchParams(searchParams.toString())
+    for (const key of Object.keys(next)) {
+      params.delete(key)
+    }
     for (const [key, value] of Object.entries(next)) {
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
+      if (value === undefined) continue
+      const arr = Array.isArray(value) ? value : [value]
+      for (const v of arr) {
+        if (v) params.append(key, v)
       }
     }
     startTransition(() => {
@@ -120,47 +231,75 @@ export function ContratoFiltros({
     })
   }
 
+  function onChangeAsegurador(siguiente: string[]) {
+    setAseguradorSeleccionado(siguiente)
+    const reales = idsReales(siguiente, aseguradorIds)
+    updateParams({
+      asegurador: reales.length > 0 ? reales : undefined,
+    })
+  }
+
+  function onChangeRegional(siguiente: string[]) {
+    setRegionalSeleccionada(siguiente)
+    const reales = idsReales(siguiente, regionalIds)
+    updateParams({
+      regional: reales.length > 0 ? reales : undefined,
+    })
+  }
+
   const hasFiltros = Boolean(
-    filtros.q || filtros.asegurador || filtros.regional
+    filtros.q ||
+      (filtros.asegurador?.length ?? 0) > 0 ||
+      (filtros.regional?.length ?? 0) > 0
   )
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <form
-        className="relative flex-1 sm:min-w-64"
-        onSubmit={(event) => {
-          event.preventDefault()
-          updateParams({ q: q.trim() || undefined })
-        }}
-      >
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(event) => setQ(event.target.value)}
-          placeholder="Buscar por nombre o número"
-          className="pl-8"
-          aria-label="Buscar contratos"
-        />
-      </form>
+      <div className="w-full min-w-0 sm:w-1/2">
+        <form
+          className="relative flex-1 sm:min-w-64"
+          onSubmit={(event) => {
+            event.preventDefault()
+            updateParams({ q: q.trim() || undefined })
+          }}
+        >
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Buscar por nombre o número"
+            className="pl-8 w-full"
+            aria-label="Buscar contratos"
+          />
+        </form>
+      </div>
 
-      <FiltroSelect
-        id="filtro-asegurador"
-        value={filtros.asegurador}
-        placeholder="Asegurador"
-        items={aseguradorItems}
-        options={aseguradorOptions}
-        onChange={(value) => updateParams({ asegurador: value })}
-      />
+      <div className="w-full min-w-0 sm:w-1/4">
+        <FiltroSelectMulti
+          id="filtro-asegurador"
+          value={aseguradorSeleccionado}
+          placeholder="Asegurador"
+          items={aseguradorItems}
+          options={aseguradorOptions}
+          onChange={onChangeAsegurador}
+          todosLosIds={aseguradorIds}
+          etiquetaTodos="Todos los aseguradores"
+        />
+      </div>
 
       {verRegional ? (
-        <FiltroSelect
-          id="filtro-regional"
-          value={filtros.regional}
-          placeholder="Regional"
-          items={regionalItems}
-          options={regionalOptions}
-          onChange={(value) => updateParams({ regional: value })}
-        />
+        <div className="w-full min-w-0 sm:w-1/4">
+          <FiltroSelectMulti
+            id="filtro-regional"
+            value={regionalSeleccionada}
+            placeholder="Regional"
+            items={regionalItems}
+            options={regionalOptions}
+            onChange={onChangeRegional}
+            todosLosIds={regionalIds}
+            etiquetaTodos="Todas las regionales"
+          />
+        </div>
       ) : null}
 
       {hasFiltros ? (
@@ -169,6 +308,8 @@ export function ContratoFiltros({
           variant="ghost"
           onClick={() => {
             setQ("")
+            setAseguradorSeleccionado([])
+            setRegionalSeleccionada([])
             startTransition(() => router.replace(pathname))
           }}
         >

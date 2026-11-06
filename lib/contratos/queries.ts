@@ -134,8 +134,8 @@ export type ContratoDetalle = ContratoRow & {
 
 export type ContratoFiltros = {
   q?: string
-  asegurador?: string
-  regional?: string
+  asegurador?: string[]
+  regional?: string[]
   vista?: VistaContratos
 }
 
@@ -368,14 +368,23 @@ export async function listContratos(
     const ids = await idsContratosDeRegional(alcance.regionalId)
     if (ids.length === 0) return []
     query = query.in("id", ids)
-  } else if (esUuid(filtros.regional)) {
-    const ids = await idsContratosDeRegional(filtros.regional)
-    if (ids.length === 0) return []
-    query = query.in("id", ids)
+  } else {
+    const regionalesSeleccionadas = (filtros.regional ?? []).filter(esUuid)
+    if (regionalesSeleccionadas.length > 0) {
+      const idsPorRegional = await Promise.all(
+        regionalesSeleccionadas.map((regionalId) =>
+          idsContratosDeRegional(regionalId)
+        )
+      )
+      const ids = [...new Set(idsPorRegional.flat())]
+      if (ids.length === 0) return []
+      query = query.in("id", ids)
+    }
   }
 
-  if (esUuid(filtros.asegurador)) {
-    query = query.eq("asegurador_id", filtros.asegurador)
+  const aseguradoresSeleccionados = (filtros.asegurador ?? []).filter(esUuid)
+  if (aseguradoresSeleccionados.length > 0) {
+    query = query.in("asegurador_id", aseguradoresSeleccionados)
   }
 
   if (filtros.q) {

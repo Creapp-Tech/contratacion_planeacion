@@ -15,6 +15,8 @@ export interface ColumnDef<T> {
   header: string
   accessor: string
   render?: (value: unknown, row: T) => React.ReactNode
+  headerClassName?: string
+  cellClassName?: string
 }
 
 export interface TableData<T> {
@@ -35,7 +37,9 @@ export function StandardTable<T extends { id?: string }>({
         <TableHeader>
           <TableRow>
             {columns.map((col) => (
-              <TableHead key={col.accessor}>{col.header}</TableHead>
+              <TableHead key={col.accessor} className={col.headerClassName}>
+                {col.header}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -43,7 +47,7 @@ export function StandardTable<T extends { id?: string }>({
           {rows.map((row, index) => (
             <TableRow key={row.id ?? index}>
               {columns.map((col) => (
-                <TableCell key={col.accessor}>
+                <TableCell key={col.accessor} className={col.cellClassName}>
                   {col.render
                     ? col.render(
                         (row as Record<string, unknown>)[col.accessor],

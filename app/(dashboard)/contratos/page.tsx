@@ -23,7 +23,7 @@ export default function ContratosPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold">Contratos</h1>

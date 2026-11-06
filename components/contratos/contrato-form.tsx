@@ -665,14 +665,18 @@ export function ContratoForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-6 max-w-4xl mx-auto"
+    >
       {serverError ? (
         <Alert variant="destructive">
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       ) : null}
 
-      <Card>
+      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-5rem)]">
+        <Card>
         <CardHeader>
           <CardTitle className="font-heading">Datos del contrato</CardTitle>
           <CardDescription>
@@ -1512,6 +1516,7 @@ export function ContratoForm({
           </CardContent>
         </Card>
       ) : null}
+      </div>
 
       <div className="flex justify-end gap-2">
         <Link

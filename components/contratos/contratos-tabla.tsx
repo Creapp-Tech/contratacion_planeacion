@@ -76,13 +76,19 @@ export function ContratosTabla({
       header: "Nombre del contrato",
       accessor: "nombre",
       render: (_value, row) => (
-        <div className="flex min-w-48 flex-col gap-0.5">
-          <span className="font-medium">{row.nombre}</span>
-          <span className="text-xs text-muted-foreground">
+        <div
+          className="max-w-[16rem] overflow-hidden text-ellipsis"
+          title={row.nombre}
+        >
+          <span className="font-medium block overflow-hidden text-ellipsis">
+            {row.nombre}
+          </span>
+          <span className="text-xs text-muted-foreground block mt-0.5">
             {row.numero_contrato}
           </span>
         </div>
       ),
+      cellClassName: "w-[16rem]",
     },
     {
       header: "Asegurador",
@@ -110,15 +116,6 @@ export function ContratosTabla({
           </div>
         )
       },
-    },
-    {
-      header: "Sedes",
-      accessor: "sedes_count",
-      render: (_value, row) => (
-        <Badge variant="secondary">
-          {row.sedes_count} sede{row.sedes_count === 1 ? "" : "s"}
-        </Badge>
-      ),
     },
     {
       header: "Vigencia",

@@ -21,6 +21,11 @@ function pick(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined
 }
 
+function pickArray(value: string | string[] | undefined): string[] | undefined {
+  if (value === undefined) return undefined
+  return Array.isArray(value) ? value.filter(Boolean) : [value].filter(Boolean)
+}
+
 function pickVigencia(value: string | string[] | undefined): FiltroVigencia {
   return value === "vigente" ||
     value === "proximo_vencer" ||
@@ -43,10 +48,12 @@ export async function ContratosContenido({
 
   const filtros: ContratoFiltros = {
     q: pick(params.q),
-    asegurador: pick(params.asegurador),
+    asegurador: pickArray(params.asegurador),
     regional: alcance.verTodo
-      ? pick(params.regional)
-      : (alcance.regionalId ?? undefined),
+      ? pickArray(params.regional)
+      : alcance.regionalId
+        ? [alcance.regionalId]
+        : undefined,
     vista,
   }
 
@@ -88,22 +95,24 @@ export async function ContratosContenido({
         </div>
       ) : null}
 
-      <ContratosTabla
-        contratos={contratos}
-        vigencia={vigencia}
-        mensajeVacio={
-          vista === "historial"
-            ? "No hay contratos en el historial."
-            : "No hay contratos en ejecución."
-        }
-        volverA={vista === "historial" ? "/historial" : "/contratos"}
-        filtrado={Boolean(
-          filtros.q ||
-            filtros.asegurador ||
-            (alcance.verTodo && filtros.regional) ||
-            vigencia !== "todos"
-        )}
-      />
+      <div className="overflow-x-auto max-w-full">
+        <ContratosTabla
+          contratos={contratos}
+          vigencia={vigencia}
+          mensajeVacio={
+            vista === "historial"
+              ? "No hay contratos en el historial."
+              : "No hay contratos en ejecución."
+          }
+          volverA={vista === "historial" ? "/historial" : "/contratos"}
+          filtrado={Boolean(
+            filtros.q ||
+              filtros.asegurador ||
+              (alcance.verTodo && filtros.regional) ||
+              vigencia !== "todos"
+          )}
+        />
+      </div>
     </div>
   )
 }
