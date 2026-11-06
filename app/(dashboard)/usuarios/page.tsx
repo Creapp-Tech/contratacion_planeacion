@@ -1,11 +1,8 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { Suspense } from "react"
-import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { UsuariosContenido } from "@/components/usuarios/usuarios-contenido"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export const metadata: Metadata = {
@@ -35,14 +32,6 @@ export default function UsuariosPage({
             Administra los usuarios del sistema y sus roles.
           </p>
         </div>
-
-        <Link
-          href="/usuarios/nuevo"
-          className={cn(buttonVariants())}
-        >
-          <PlusIcon />
-          Nuevo usuario
-        </Link>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

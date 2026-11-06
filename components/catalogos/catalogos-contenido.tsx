@@ -1,4 +1,4 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import type { CatalogoConfig } from "@/lib/catalogos/dominios"
 import { listCatalogos } from "@/lib/catalogos/queries"
 
@@ -9,7 +9,7 @@ export async function CatalogosContenido({
 }: {
   config: CatalogoConfig
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const items = await listCatalogos(config.dominio)
 

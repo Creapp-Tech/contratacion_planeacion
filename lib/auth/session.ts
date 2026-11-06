@@ -6,6 +6,7 @@ import {
   puedeAccederContratacion,
   puedeAccederPlaneacion,
   puedeEditarPlaneacion,
+  puedeVerTodoModulos,
 } from "@/lib/constants/roles"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
@@ -165,6 +166,105 @@ export async function requireAccesoContratacion(): Promise<CurrentUsuario> {
   }
 
   if (!puedeAccederContratacion(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/**
+ * Guarda de solo lectura: permite acceder al módulo para VERlo,
+ * pero NO crear, editar ni eliminar.
+ * Usar con roles que tienen `puedeVerTodoModulos = true` (CEO, Gerente General).
+ */
+export async function requireAccesoSoloLectura(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeVerTodoModulos(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/**
+ * Guarda para módulos de administración de usuarios:
+ * - superadmin: acceso total (solo él puede ver/gestionar usuarios)
+ */
+export async function requireAdminUsuarios(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  // Solo superadmin puede administrar usuarios.
+  if (usuario.rol !== "superadmin") {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/**
+ * Guarda para páginas de solo lectura de cualquier módulo:
+ * - superadmin: acceso total
+ * - CEO, CFO, Gerente General: pueden VER cualquier módulo
+ *
+ * No habilita escritura: las pantallas de crear/editar y las server actions
+ * conservan sus guardias de escritura (`requireSuperadmin` / `requireEditor`).
+ */
+export async function requireAccesoModulo(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  const esSuperadmin = usuario.rol === "superadmin"
+  const esSoloLectura = puedeVerTodoModulos(usuario.rol)
+
+  if (!esSuperadmin && !esSoloLectura) {
     redirect("/")
   }
 

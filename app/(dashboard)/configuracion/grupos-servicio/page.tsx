@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { GruposServicioContenido } from "@/components/grupos-servicio/grupos-servicio-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -26,12 +27,14 @@ export default function GruposServicioPage() {
             Administra el catálogo de grupos de los servicios.
           </p>
         </div>
-        <Link
-          href="/configuracion/grupos-servicio/nuevo"
-          className={cn(buttonVariants())}
-        >
-          <PlusIcon /> Nuevo grupo
-        </Link>
+        <SoloEscritura>
+          <Link
+            href="/configuracion/grupos-servicio/nuevo"
+            className={cn(buttonVariants())}
+          >
+            <PlusIcon /> Nuevo grupo
+          </Link>
+        </SoloEscritura>
       </div>
       <Suspense fallback={<TablaSkeleton />}>
         <GruposServicioContenido />

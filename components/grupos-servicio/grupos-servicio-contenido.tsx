@@ -1,10 +1,10 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { listGruposServicioAdmin } from "@/lib/servicios/queries"
 
 import { GruposServicioTabla } from "./grupos-servicio-tabla"
 
 export async function GruposServicioContenido() {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const grupos = await listGruposServicioAdmin()
 

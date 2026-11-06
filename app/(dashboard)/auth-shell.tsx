@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { io } from "next/cache";
 
 import { getCurrentUsuarioResult } from "@/lib/auth/session";
+import { puedeEscribirModulo } from "@/lib/constants/roles";
 
+import { PermisosProvider } from "@/components/auth/permisos-provider";
 import { AppHeader } from "@/components/shell/app-header";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -41,16 +43,18 @@ export async function AuthShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar rol={usuario.rol} />
-      <SidebarInset>
-        <AppHeader
-          nombre={usuario.nombre_completo}
-          rol={usuario.rol}
-          email={usuario.email}
-        />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <PermisosProvider puedeEscribir={puedeEscribirModulo(usuario.rol)}>
+      <SidebarProvider>
+        <AppSidebar rol={usuario.rol} />
+        <SidebarInset>
+          <AppHeader
+            nombre={usuario.nombre_completo}
+            rol={usuario.rol}
+            email={usuario.email}
+          />
+          <main className="flex-1 p-4 md:p-6">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+    </PermisosProvider>
   );
 }

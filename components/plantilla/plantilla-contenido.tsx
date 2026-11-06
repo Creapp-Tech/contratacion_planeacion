@@ -1,4 +1,4 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { listPlantilla } from "@/lib/plantilla/queries"
 
 function pick(value: string | string[] | undefined) {
@@ -10,7 +10,7 @@ export async function PlantillaContenido({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const params = await searchParams
   const filtros = {

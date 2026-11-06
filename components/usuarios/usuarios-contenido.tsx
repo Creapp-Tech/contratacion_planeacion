@@ -1,5 +1,6 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAdminUsuarios } from "@/lib/auth/session"
 import { listRegionales, listUsuarios } from "@/lib/usuarios/queries"
+import { puedeVerTodoModulos } from "@/lib/constants/roles"
 
 import { UsuarioFiltros } from "./usuario-filtros"
 import { UsuariosTabla } from "./usuarios-tabla"
@@ -14,7 +15,7 @@ export async function UsuariosContenido({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireSuperadmin()
+  const usuario = await requireAdminUsuarios()
 
   const params = await searchParams
   const filtros = {
@@ -29,12 +30,16 @@ export async function UsuariosContenido({
     listUsuarios(filtros),
   ])
 
+  const soloLectura = puedeVerTodoModulos(usuario.rol)
+
   return (
     <div className="flex flex-col gap-4">
       <UsuarioFiltros regionales={regionales} filtros={filtros} />
-      <div className="flex items-center gap-2">
-        <StandardCreateBtn module="usuarios" />
-      </div>
+      {!soloLectura && (
+        <div className="flex items-center gap-2">
+          <StandardCreateBtn module="usuarios" />
+        </div>
+      )}
       <UsuariosTabla usuarios={usuarios} />
     </div>
   )

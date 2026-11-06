@@ -6,6 +6,7 @@ import { useState, useTransition } from "react"
 import { EyeIcon, Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { eliminarArea } from "@/app/(dashboard)/configuracion/areas/actions"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -53,55 +54,57 @@ export function AreaAcciones({ id, nombre, grupo }: AreaAccionesProps) {
       >
         <EyeIcon />
       </Link>
-      <Link
-        href={`/configuracion/areas/${id}/editar`}
-        aria-label={`Editar ${nombre}`}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-      >
-        <PencilIcon />
-      </Link>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Borrar ${nombre}`}
-        onClick={() => {
-          setError(null)
-          setOpen(true)
-        }}
-      >
-        <Trash2Icon />
-      </Button>
+      <SoloEscritura>
+        <Link
+          href={`/configuracion/areas/${id}/editar`}
+          aria-label={`Editar ${nombre}`}
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        >
+          <PencilIcon />
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Borrar ${nombre}`}
+          onClick={() => {
+            setError(null)
+            setOpen(true)
+          }}
+        >
+          <Trash2Icon />
+        </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Borrar área</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará el área {nombre} del grupo {grupo}. Si está asignada
-              a sedes, también se quitará de las sedes. Esta acción no se puede
-              deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
-              Borrar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Borrar área</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se eliminará el área {nombre} del grupo {grupo}. Si está asignada
+                a sedes, también se quitará de las sedes. Esta acción no se puede
+                deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? <Loader2Icon className="animate-spin" /> : null}
+                Borrar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SoloEscritura>
     </div>
   )
 }

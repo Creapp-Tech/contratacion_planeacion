@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { IpcContenido } from "@/components/ipc/ipc-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -39,10 +40,12 @@ export default function IpcPage({
           </p>
         </div>
 
-        <Link href="/ipc/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nuevo registro
-        </Link>
+        <SoloEscritura>
+          <Link href="/ipc/nuevo" className={cn(buttonVariants())}>
+            <PlusIcon />
+            Nuevo registro
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<ContenidoSkeleton />}>

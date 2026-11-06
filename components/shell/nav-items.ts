@@ -33,6 +33,7 @@ import {
 import {
   ROLES_CONTRATACION,
   ROLES_PLANEACION,
+  puedeVerTodoModulos,
   type Rol,
 } from "@/lib/constants/roles"
 
@@ -220,8 +221,18 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export function getNavGroups(rol: string | null): NavGroup[] {
   if (!rol) return []
+
+  // Los roles de solo lectura ven todos los módulos excepto "Usuarios"
+  // (solo superadmin administra usuarios).
+  const esSoloLectura = puedeVerTodoModulos(rol)
+
   return NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => item.roles.includes(rol as Rol)),
+    items: group.items.filter((item) => {
+      // Usuarios solo para superadmin
+      if (item.href === "/usuarios") return rol === "superadmin"
+      if (esSoloLectura) return true
+      return item.roles.includes(rol as Rol)
+    }),
   })).filter((group) => group.items.length > 0)
 }

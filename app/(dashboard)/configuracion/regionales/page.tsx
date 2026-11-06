@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { RegionalesContenido } from "@/components/regionales/regionales-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -27,13 +28,15 @@ export default function ConfiguracionRegionalesPage() {
           </p>
         </div>
 
-        <Link
-          href="/configuracion/regionales/nuevo"
-          className={cn(buttonVariants())}
-        >
-          <PlusIcon />
-          Nueva regional
-        </Link>
+        <SoloEscritura>
+          <Link
+            href="/configuracion/regionales/nuevo"
+            className={cn(buttonVariants())}
+          >
+            <PlusIcon />
+            Nueva regional
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

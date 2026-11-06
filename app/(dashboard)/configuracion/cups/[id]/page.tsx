@@ -5,6 +5,7 @@ import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { CupDetalleContenido } from "@/components/cups/cup-detalle-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -42,7 +43,9 @@ export default function CupDetallePage({
           <CardTitle className="font-heading">Detalle del CUPS</CardTitle>
           <CardAction>
             <Suspense fallback={null}>
-              <EditarLink params={params} />
+              <SoloEscritura>
+                <EditarLink params={params} />
+              </SoloEscritura>
             </Suspense>
           </CardAction>
         </CardHeader>

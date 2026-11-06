@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { AseguradoresContenido } from "@/components/aseguradores/aseguradores-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -27,13 +28,15 @@ export default function AseguradoresPage() {
           </p>
         </div>
 
-        <Link
-          href="/configuracion/aseguradores/nuevo"
-          className={cn(buttonVariants())}
-        >
-          <PlusIcon />
-          Nuevo asegurador
-        </Link>
+        <SoloEscritura>
+          <Link
+            href="/configuracion/aseguradores/nuevo"
+            className={cn(buttonVariants())}
+          >
+            <PlusIcon />
+            Nuevo asegurador
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

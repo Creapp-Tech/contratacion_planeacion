@@ -3,9 +3,38 @@
 import { revalidatePath } from "next/cache"
 import { requireSuperadmin } from "@/lib/auth/session"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { cupsSchema, type CupsInput } from "@/lib/validations/cups"
+import { listOpcionesCups } from "@/lib/cups/queries"
+import { cupsSchema, type CupsInput, type CupsOutput } from "@/lib/validations/cups"
 
 export type CupsActionResult = { success: true } | { error: string }
+
+type FilaImportacion = Record<string, unknown>
+
+type RegistroCups = {
+  codigo: string
+  nombre: string
+  descripcion: string | null
+  grupo_id: string | null
+  servicio_id: string | null
+  capitulo: string | null
+  seccion: string | null
+  extra_vii: string | null
+  extra_viii: string | null
+  extra_ix: string | null
+  version_resolucion: string
+  fecha_inicio: string
+  fecha_fin?: string
+  activo: boolean
+}
+
+type ActualizacionCups = RegistroCups & { id: string }
+
+function normalizarFechas(data: CupsOutput) {
+  return {
+    ...data,
+    fecha_fin: data.fecha_fin && data.fecha_fin.trim() !== "" ? data.fecha_fin : null,
+  }
+}
 
 const CUPS_PATH = "/configuracion/cups"
 
@@ -31,10 +60,7 @@ export async function crearCups(input: CupsInput): Promise<CupsActionResult> {
 
   const { error } = await createAdminClient()
     .from("cups")
-    .insert({
-      ...parsed.data,
-      codigo: parsed.data.codigo,
-    })
+    .insert(normalizarFechas(parsed.data))
 
   if (error) return { error: error.message }
 
@@ -52,7 +78,7 @@ export async function actualizarCups(id: string, input: CupsInput): Promise<Cups
 
   const { error } = await createAdminClient()
     .from("cups")
-    .update(parsed.data)
+    .update(normalizarFechas(parsed.data))
     .eq("id", id)
 
   if (error) return { error: error.message }
@@ -76,7 +102,7 @@ export async function eliminarCups(id: string): Promise<CupsActionResult> {
 }
 
 export async function importarCups(
-  filas: any[]
+  filas: FilaImportacion[]
 ): Promise<
   | { success: true; insertadas: number; actualizadas: number; omitidas: { fila: number; motivo: string }[] }
   | { error: string }
@@ -84,8 +110,8 @@ export async function importarCups(
   await requireSuperadmin()
 
   const omitidas: { fila: number; motivo: string }[] = []
-  const payload: any[] = []
-  const actualizaciones: { id: string; [key: string]: any }[] = []
+  const payload: RegistroCups[] = []
+  const actualizaciones: ActualizacionCups[] = []
 
   // Cargar existentes para detectar duplicados por código + versión
   const existentesRes = await createAdminClient()
@@ -97,7 +123,7 @@ export async function importarCups(
   }
 
   const mapaExistentes = new Map(
-    (existentesRes.data ?? []).map((c: any) => [
+    ((existentesRes.data ?? []) as { id: string; codigo: string | null; version_resolucion: string | null }[]).map((c) => [
       `${c.codigo?.trim().toLowerCase()}|${c.version_resolucion?.trim().toLowerCase()}`,
       c.id,
     ])
@@ -113,11 +139,14 @@ export async function importarCups(
   if (serviciosRes.error) return { error: "No se pudo cargar los servicios." }
 
   const mapaGrupos = new Map(
-    (gruposRes.data ?? []).map((g: any) => [g.nombre?.trim().toLowerCase(), g.id])
+    ((gruposRes.data ?? []) as { id: string; nombre: string | null }[]).map((g) => [g.nombre?.trim().toLowerCase(), g.id])
   )
 
   const mapaServicios = new Map(
-    (serviciosRes.data ?? []).map((s: any) => [s.nombre?.trim().toLowerCase(), s])
+    ((serviciosRes.data ?? []) as { id: string; nombre: string | null; grupo_id: string | null }[]).map((s) => [
+      s.nombre?.trim().toLowerCase(),
+      s,
+    ])
   )
 
   const vistos = new Set<string>()
@@ -127,10 +156,15 @@ export async function importarCups(
     const fila = filas[i]
 
     const codigo = String(fila.codigo ?? "").trim()
+    const nombre = String(fila.nombre ?? "").trim() || String(fila.descripcion ?? "").trim()
     const descripcion = String(fila.descripcion ?? "").trim()
     const grupoNombre = String(fila.grupo ?? fila.grupo_servicio ?? "").trim()
     const servicioNombre = String(fila.servicio ?? "").trim()
+    const capitulo = String(fila.capitulo ?? "").trim()
     const seccion = String(fila.seccion ?? "").trim()
+    const extraVii = String(fila.extra_vii ?? "").trim()
+    const extraViii = String(fila.extra_viii ?? "").trim()
+    const extraIx = String(fila.extra_ix ?? "").trim()
     const version = String(fila.version_resolucion ?? "").trim()
     const fechaInicio = String(fila.fecha_inicio ?? "").trim()
     const fechaFin = String(fila.fecha_fin ?? "").trim()
@@ -144,12 +178,8 @@ export async function importarCups(
       omitidas.push({ fila: numeroFila, motivo: "El código debe tener 6 dígitos" })
       continue
     }
-    if (!descripcion) {
-      omitidas.push({ fila: numeroFila, motivo: "Falta la descripción" })
-      continue
-    }
-    if (!seccion) {
-      omitidas.push({ fila: numeroFila, motivo: "Falta la sección" })
+    if (!nombre) {
+      omitidas.push({ fila: numeroFila, motivo: "Falta el nombre" })
       continue
     }
     if (!version) {
@@ -179,14 +209,14 @@ export async function importarCups(
         continue
       }
       // Si hay grupo, verificar que el servicio pertenezca a ese grupo
-      if (grupoId && (svc as any).grupo_id !== grupoId) {
+      if (grupoId && svc.grupo_id !== grupoId) {
         omitidas.push({
           fila: numeroFila,
           motivo: `El servicio "${servicioNombre}" no pertenece al grupo "${grupoNombre}"`,
         })
         continue
       }
-      servicioId = (svc as any).id
+      servicioId = svc.id
     }
 
     const clave = `${codigo.toLowerCase()}|${version.toLowerCase()}`
@@ -197,12 +227,17 @@ export async function importarCups(
     }
     vistos.add(clave)
 
-    const registro: any = {
+    const registro: RegistroCups = {
       codigo,
-      descripcion,
+      nombre,
+      descripcion: descripcion || null,
       grupo_id: grupoId,
       servicio_id: servicioId,
-      seccion,
+      capitulo: capitulo || null,
+      seccion: seccion || null,
+      extra_vii: extraVii || null,
+      extra_viii: extraViii || null,
+      extra_ix: extraIx || null,
       version_resolucion: version,
       fecha_inicio: fechaInicio,
       activo: activo !== "false",
@@ -260,6 +295,26 @@ export async function obtenerServiciosPorGrupo(grupoId: string): Promise<
   if (error) return { error: error.message }
 
   return { success: true, servicios: (data ?? []) as { id: string; nombre: string }[] }
+}
+
+// Server action para obtener las opciones de capítulo y sección (uso en cliente)
+export async function obtenerOpcionesCups(): Promise<
+  | { success: true; capitulos: string[]; secciones: string[] }
+  | { error: string }
+> {
+  await requireSuperadmin()
+
+  try {
+    const opciones = await listOpcionesCups()
+    return { success: true, ...opciones }
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudieron cargar las opciones de CUPS.",
+    }
+  }
 }
 
 // Server action para obtener grupos de servicio (uso en cliente)

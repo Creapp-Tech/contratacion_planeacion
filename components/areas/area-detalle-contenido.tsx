@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { getArea } from "@/lib/areas/queries"
 import { Badge } from "@/components/ui/badge"
 
@@ -14,7 +14,7 @@ export async function AreaDetalleContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const { id } = await params
   const area = await getArea(id)

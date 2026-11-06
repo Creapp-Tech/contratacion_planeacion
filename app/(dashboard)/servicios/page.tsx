@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { ServiciosContenido } from "@/components/servicios/servicios-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -31,10 +32,12 @@ export default function ServiciosPage({
           </p>
         </div>
 
-        <Link href="/servicios/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nuevo servicio
-        </Link>
+        <SoloEscritura>
+          <Link href="/servicios/nuevo" className={cn(buttonVariants())}>
+            <PlusIcon />
+            Nuevo servicio
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

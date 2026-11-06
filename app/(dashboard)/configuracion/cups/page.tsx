@@ -6,6 +6,7 @@ import { cn } from "cn"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CupsContenido } from "@/components/cups/usuarios-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 
 export const metadata: Metadata = {
   title: "CUPS",
@@ -22,9 +23,11 @@ export default function CupsPage({ searchParams }: { searchParams: Promise<Recor
           </p>
         </div>
 
-        <Link href="/configuracion/cups/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon /> Nuevo CUPS
-        </Link>
+        <SoloEscritura>
+          <Link href="/configuracion/cups/nuevo" className={cn(buttonVariants())}>
+            <PlusIcon /> Nuevo CUPS
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<Skeleton />}>

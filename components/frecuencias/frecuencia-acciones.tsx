@@ -6,6 +6,7 @@ import { useState, useTransition } from "react"
 import { EyeIcon, Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { eliminarFrecuencia } from "@/app/(dashboard)/frecuencias/actions"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -53,57 +54,59 @@ export function FrecuenciaAcciones({
       >
         <EyeIcon />
       </Link>
-      <Link
-        href={`/frecuencias/${id}/editar`}
-        aria-label="Editar frecuencia"
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-      >
-        <PencilIcon />
-      </Link>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Borrar frecuencia"
-        onClick={() => {
-          setError(null)
-          setOpen(true)
-        }}
-      >
-        <Trash2Icon />
-      </Button>
+      <SoloEscritura>
+        <Link
+          href={`/frecuencias/${id}/editar`}
+          aria-label="Editar frecuencia"
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        >
+          <PencilIcon />
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Borrar frecuencia"
+          onClick={() => {
+            setError(null)
+            setOpen(true)
+          }}
+        >
+          <Trash2Icon />
+        </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Borrar frecuencia</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará la frecuencia de uso. Esta acción no se puede
-              deshacer.
-              {marcada
-                ? " Esta frecuencia se usa para el cálculo de ocupación: su sede quedará sin frecuencia de cálculo hasta que marques otra."
-                : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
-              Borrar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Borrar frecuencia</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se eliminará la frecuencia de uso. Esta acción no se puede
+                deshacer.
+                {marcada
+                  ? " Esta frecuencia se usa para el cálculo de ocupación: su sede quedará sin frecuencia de cálculo hasta que marques otra."
+                  : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? <Loader2Icon className="animate-spin" /> : null}
+                Borrar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SoloEscritura>
     </div>
   )
 }

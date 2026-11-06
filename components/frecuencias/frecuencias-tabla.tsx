@@ -11,6 +11,7 @@ import { etiquetaTipoFrecuencia, tipoCalculaOcupacion } from "@/lib/frecuencias/
 
 import { FrecuenciaAcciones } from "./frecuencia-acciones"
 import { FrecuenciaCalculoSwitch } from "./frecuencia-calculo-switch"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 
 export function FrecuenciasTabla({
   frecuencias,
@@ -55,14 +56,16 @@ export function FrecuenciasTabla({
               <TableCell>{frecuencia.version}</TableCell>
               <TableCell>
                 {tipoCalculaOcupacion(frecuencia.tipo_frecuencia) ? (
-                  <FrecuenciaCalculoSwitch
-                    id={frecuencia.id}
-                    sedeNombre={frecuencia.sede_nombre}
-                    nombre={frecuencia.nombre_nota_tecnica}
-                    version={frecuencia.version}
-                    marcada={frecuencia.usar_en_calculo}
-                    activa={frecuencia.activo}
-                  />
+                  <SoloEscritura>
+                    <FrecuenciaCalculoSwitch
+                      id={frecuencia.id}
+                      sedeNombre={frecuencia.sede_nombre}
+                      nombre={frecuencia.nombre_nota_tecnica}
+                      version={frecuencia.version}
+                      marcada={frecuencia.usar_en_calculo}
+                      activa={frecuencia.activo}
+                    />
+                  </SoloEscritura>
                 ) : (
                   <span className="text-sm text-muted-foreground">—</span>
                 )}

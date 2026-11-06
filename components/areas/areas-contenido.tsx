@@ -3,6 +3,7 @@ import { listAreas, listGrupos } from "@/lib/areas/queries"
 
 import { AreasTabla } from "./areas-tabla"
 import { GrupoHerramientas } from "./grupo-herramientas"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 
 export async function AreasContenido() {
   await requireAccesoPlaneacion()
@@ -18,7 +19,9 @@ export async function AreasContenido() {
             Define el catálogo de áreas con grupo, medida y si mide capacidad.
           </p>
         </div>
-        <GrupoHerramientas grupos={grupos} />
+        <SoloEscritura>
+          <GrupoHerramientas grupos={grupos} />
+        </SoloEscritura>
       </div>
       <AreasTabla areas={areas} />
     </div>

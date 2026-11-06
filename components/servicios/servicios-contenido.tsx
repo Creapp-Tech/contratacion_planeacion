@@ -1,4 +1,4 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { listAreas } from "@/lib/areas/queries"
 import { listCatalogos } from "@/lib/catalogos/queries"
 import { listGruposServicio, listServicios } from "@/lib/servicios/queries"
@@ -6,6 +6,7 @@ import { listGruposServicio, listServicios } from "@/lib/servicios/queries"
 import { ServicioFiltros } from "./servicio-filtros"
 import { ServicioHerramientas } from "./servicio-herramientas"
 import { ServiciosTabla } from "./servicios-tabla"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 
 function pick(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined
@@ -16,7 +17,7 @@ export async function ServiciosContenido({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const params = (await searchParams) ?? {}
   const filtros = {
@@ -45,9 +46,11 @@ export async function ServiciosContenido({
         tiposPersonal={tiposPersonal}
         filtros={filtros}
       />
-      <ServicioHerramientas
-        tiposPersonal={tiposPersonal.map((tipo) => tipo.nombre)}
-      />
+      <SoloEscritura>
+        <ServicioHerramientas
+          tiposPersonal={tiposPersonal.map((tipo) => tipo.nombre)}
+        />
+      </SoloEscritura>
       <ServiciosTabla servicios={servicios} filtrado={hayFiltros} />
     </div>
   )

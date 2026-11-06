@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { CATALOGOS, type CatalogoDominio } from "@/lib/catalogos/dominios"
 
 import { CatalogosContenido } from "./catalogos-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 
 function TablaSkeleton() {
   return <Skeleton className="h-64 w-full rounded-xl" />
@@ -29,10 +30,12 @@ export function CatalogoListaPage({ dominio }: { dominio: CatalogoDominio }) {
           </p>
         </div>
 
-        <Link href={`${config.ruta}/nuevo`} className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nuevo {config.singular}
-        </Link>
+        <SoloEscritura>
+          <Link href={`${config.ruta}/nuevo`} className={cn(buttonVariants())}>
+            <PlusIcon />
+            Nuevo {config.singular}
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

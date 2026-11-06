@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { IpcNacionalContenido } from "@/components/ipc-nacional/ipc-nacional-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -28,13 +29,15 @@ export default function IpcNacionalPage() {
           </p>
         </div>
 
-        <Link
-          href="/configuracion/ipc-nacional/nuevo"
-          className={cn(buttonVariants())}
-        >
-          <PlusIcon />
-          Nuevo registro
-        </Link>
+        <SoloEscritura>
+          <Link
+            href="/configuracion/ipc-nacional/nuevo"
+            className={cn(buttonVariants())}
+          >
+            <PlusIcon />
+            Nuevo registro
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

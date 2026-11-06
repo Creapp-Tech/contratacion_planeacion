@@ -14,6 +14,7 @@ import {
 
 import { ContratoForm } from "./contrato-form"
 import { ContratoHistorial } from "./contrato-historial"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "cn"
 
@@ -48,13 +49,15 @@ export async function ContratoDetalleContenido({
             <ArrowDownUpIcon className="h-4 w-4 text-muted-foreground" />
             <h2 className="font-heading text-lg font-semibold">Historial de documentos</h2>
           </div>
-          <Link
-            href={`/contratos/${id}/nuevo-documento`}
-            className={cn(buttonVariants({ size: "sm" }))}
-          >
-            <PlusIcon className="mr-1 h-4 w-4" />
-            Nuevo documento
-          </Link>
+          <SoloEscritura>
+            <Link
+              href={`/contratos/${id}/nuevo-documento`}
+              className={cn(buttonVariants({ size: "sm" }))}
+            >
+              <PlusIcon className="mr-1 h-4 w-4" />
+              Nuevo documento
+            </Link>
+          </SoloEscritura>
         </div>
         <div className="p-6">
           <ContratoHistorial documentos={documentos} contratoId={id} />

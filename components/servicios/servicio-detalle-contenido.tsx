@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { getServicio } from "@/lib/servicios/queries"
 
 const fecha = new Intl.DateTimeFormat("es-MX", {
@@ -13,7 +13,7 @@ export async function ServicioDetalleContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const { id } = await params
   const servicio = await getServicio(id)

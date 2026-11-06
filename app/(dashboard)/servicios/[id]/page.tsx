@@ -5,6 +5,7 @@ import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { ServicioDetalleContenido } from "@/components/servicios/servicio-detalle-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -51,7 +52,9 @@ export default function ServicioDetallePage({
           <CardTitle className="font-heading">Detalle del servicio</CardTitle>
           <CardAction>
             <Suspense fallback={null}>
-              <EditarLink params={params} />
+              <SoloEscritura>
+                <EditarLink params={params} />
+              </SoloEscritura>
             </Suspense>
           </CardAction>
         </CardHeader>

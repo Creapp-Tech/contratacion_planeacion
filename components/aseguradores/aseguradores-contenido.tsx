@@ -1,10 +1,10 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { listAseguradoresAdmin } from "@/lib/aseguradores/queries"
 
 import { AseguradoresTabla } from "./aseguradores-tabla"
 
 export async function AseguradoresContenido() {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const aseguradores = await listAseguradoresAdmin()
 

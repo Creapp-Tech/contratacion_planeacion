@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { getFrecuencia } from "@/lib/frecuencias/queries"
 import {
   etiquetaTipoFrecuencia,
@@ -14,7 +14,7 @@ export async function FrecuenciaDetalleContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const { id } = await params
   const frecuencia = await getFrecuencia(id)

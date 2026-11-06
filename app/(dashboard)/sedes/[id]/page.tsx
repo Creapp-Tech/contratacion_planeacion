@@ -5,6 +5,7 @@ import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { SedeDetalleContenido } from "@/components/sedes/sede-detalle-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -49,7 +50,9 @@ export default function SedeDetallePage({
           <CardTitle className="font-heading">Detalle de la sede</CardTitle>
           <CardAction>
             <Suspense fallback={null}>
+              <SoloEscritura>
               <EditarLink params={params} />
+            </SoloEscritura>
             </Suspense>
           </CardAction>
         </CardHeader>

@@ -6,6 +6,7 @@ import { cn } from "cn"
 
 import { ContratoDetalleContenido } from "@/components/contratos/contrato-detalle-contenido"
 import { DuplicarContratoBoton } from "@/components/contratos/duplicar-contrato"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -51,8 +52,10 @@ export default async function ContratoDetallePage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DuplicarLink params={params} volverA={volverA} />
-          <EditarLink params={params} volverA={volverA} />
+          <SoloEscritura>
+            <DuplicarLink params={params} volverA={volverA} />
+            <EditarLink params={params} volverA={volverA} />
+          </SoloEscritura>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import {
   listFrecuencias,
   listOpcionesFiltrosFrecuencias,
@@ -8,6 +8,7 @@ import {
 import { FrecuenciaFiltros } from "./frecuencia-filtros"
 import { FrecuenciaHerramientas } from "./frecuencia-herramientas"
 import { FrecuenciasTabla } from "./frecuencias-tabla"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 
 function pick(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined
@@ -18,7 +19,7 @@ export async function FrecuenciasContenido({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const params = await searchParams
   const filtros: FrecuenciaFiltrosTipo = {
@@ -42,7 +43,9 @@ export async function FrecuenciasContenido({
   return (
     <div className="flex flex-col gap-4">
       <FrecuenciaFiltros opciones={opciones} filtros={filtros} />
-      <FrecuenciaHerramientas />
+      <SoloEscritura>
+        <FrecuenciaHerramientas />
+      </SoloEscritura>
       <FrecuenciasTabla frecuencias={frecuencias} />
     </div>
   )

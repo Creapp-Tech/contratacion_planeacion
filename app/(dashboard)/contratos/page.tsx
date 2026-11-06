@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { ContratosContenido } from "@/components/contratos/contratos-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -31,10 +32,12 @@ export default function ContratosPage({
           </p>
         </div>
 
-        <Link href="/contratos/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nuevo contrato
-        </Link>
+        <SoloEscritura>
+          <Link href="/contratos/nuevo" className={cn(buttonVariants())}>
+            <PlusIcon />
+            Nuevo contrato
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

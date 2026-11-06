@@ -16,6 +16,7 @@ import {
   cambiarEstadoGrupoServicio,
   eliminarGrupoServicio,
 } from "@/app/(dashboard)/configuracion/grupos-servicio/actions"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -96,64 +97,66 @@ export function GrupoServicioAcciones({
       >
         <EyeIcon />
       </Link>
-      <Link
-        href={`/configuracion/grupos-servicio/${id}/editar`}
-        aria-label={`Editar ${nombre}`}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-      >
-        <PencilIcon />
-      </Link>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={activo ? `Desactivar ${nombre}` : `Activar ${nombre}`}
-        onClick={() => abrir("estado")}
-      >
-        {activo ? <CircleOffIcon /> : <CircleCheckIcon />}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Eliminar ${nombre}`}
-        onClick={() => abrir("eliminar")}
-      >
-        <Trash2Icon />
-      </Button>
+      <SoloEscritura>
+        <Link
+          href={`/configuracion/grupos-servicio/${id}/editar`}
+          aria-label={`Editar ${nombre}`}
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        >
+          <PencilIcon />
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={activo ? `Desactivar ${nombre}` : `Activar ${nombre}`}
+          onClick={() => abrir("estado")}
+        >
+          {activo ? <CircleOffIcon /> : <CircleCheckIcon />}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Eliminar ${nombre}`}
+          onClick={() => abrir("eliminar")}
+        >
+          <Trash2Icon />
+        </Button>
 
-      <AlertDialog
-        open={dialogo !== null}
-        onOpenChange={(open) => {
-          if (!open) setDialogo(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tituloDialogo}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {descripcionDialogo}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant={esEliminar ? "destructive" : "default"}
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
-              {textoConfirmar}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog
+          open={dialogo !== null}
+          onOpenChange={(open) => {
+            if (!open) setDialogo(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{tituloDialogo}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {descripcionDialogo}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+              <Button
+                type="button"
+                variant={esEliminar ? "destructive" : "default"}
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? <Loader2Icon className="animate-spin" /> : null}
+                {textoConfirmar}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SoloEscritura>
     </div>
   )
 }

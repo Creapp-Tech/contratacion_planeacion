@@ -3,10 +3,15 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export type CupsRow = {
   id: string
   codigo: string
-  descripcion: string
+  nombre: string
+  descripcion: string | null
+  capitulo: string | null
   grupo_id: string | null
   servicio_id: string | null
-  seccion: string
+  seccion: string | null
+  extra_vii: string | null
+  extra_viii: string | null
+  extra_ix: string | null
   version_resolucion: string
   fecha_inicio: string
   fecha_fin: string | null
@@ -33,10 +38,59 @@ export type ServicioOption = {
   grupo_id: string | null
 }
 
+export type CupsOpciones = {
+  capitulos: string[]
+  secciones: string[]
+}
+
+const collator = new Intl.Collator("es", { numeric: true, sensitivity: "base" })
+
+function esCapitulo(nombre: string, descripcion: string | null) {
+  const valor = `${descripcion ?? ""} ${nombre}`.toLowerCase()
+  return valor.includes("capítulo") || valor.includes("capitulo")
+}
+
+function esAnexo(nombre: string, descripcion: string | null) {
+  const valor = `${descripcion ?? ""} ${nombre}`.toLowerCase()
+  return valor.includes("anexo")
+}
+
+function esSeccion(nombre: string, descripcion: string | null) {
+  const valor = `${descripcion ?? ""} ${nombre}`.toLowerCase()
+  return valor.includes("sección") || valor.includes("seccion")
+}
+
+export async function listOpcionesCups(): Promise<CupsOpciones> {
+  const { data, error } = await createAdminClient()
+    .from("catalogos_opciones")
+    .select("nombre, descripcion")
+    .eq("dominio", "cups")
+    .eq("activo", true)
+
+  if (error) throw error
+
+  const opciones = (data ?? []) as { nombre: string; descripcion: string | null }[]
+
+  const capitulos = opciones
+    .filter((opcion) =>
+      esCapitulo(opcion.nombre, opcion.descripcion) || esAnexo(opcion.nombre, opcion.descripcion)
+    )
+    .map((opcion) => opcion.nombre)
+    .sort((a, b) => collator.compare(a, b))
+
+  const secciones = opciones
+    .filter((opcion) => esSeccion(opcion.nombre, opcion.descripcion))
+    .map((opcion) => opcion.nombre)
+    .sort((a, b) => collator.compare(a, b))
+
+  return { capitulos, secciones }
+}
+
 export type CupsFiltros = {
-  q?: string           // buscador en código + descripción
+  q?: string           // buscador en código + nombre + descripción
   grupo_id?: string    // filtro por grupo de servicio
   servicio_id?: string // filtro por servicio
+  capitulo?: string
   seccion?: string
   version?: string
   activo?: boolean
@@ -53,7 +107,10 @@ export async function listCups(filtros: CupsFiltros = {}): Promise<CupsRow[]> {
     .order("codigo", { ascending: true })
 
   if (filtros.q) {
-    query = query.ilike("codigo", `%${filtros.q}%`).or(`ilike(descripcion, \`%${filtros.q}%\`)`)
+    const q = filtros.q.replace(/[,()]/g, " ").trim()
+    query = query.or(
+      `codigo.ilike.%${q}%,nombre.ilike.%${q}%,descripcion.ilike.%${q}%`
+    )
   }
 
   if (filtros.grupo_id) {
@@ -62,6 +119,10 @@ export async function listCups(filtros: CupsFiltros = {}): Promise<CupsRow[]> {
 
   if (filtros.servicio_id) {
     query = query.eq("servicio_id", filtros.servicio_id)
+  }
+
+  if (filtros.capitulo) {
+    query = query.eq("capitulo", filtros.capitulo)
   }
 
   if (filtros.seccion) {

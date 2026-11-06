@@ -5,6 +5,7 @@ import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { UsuarioDetalleContenido } from "@/components/usuarios/usuario-detalle-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -64,7 +65,9 @@ export default function UsuarioDetallePage({
 function DetalleAcciones({ params }: { params: Promise<{ id: string }> }) {
   return (
     <Suspense fallback={null}>
-      <EditarLink params={params} />
+      <SoloEscritura>
+        <EditarLink params={params} />
+      </SoloEscritura>
     </Suspense>
   )
 }

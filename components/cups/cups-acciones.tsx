@@ -6,6 +6,7 @@ import { useState, useTransition } from "react"
 import { EyeIcon, Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { eliminarCups } from "@/app/(dashboard)/configuracion/cups/actions"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -59,53 +60,55 @@ export function CupAcciones({
       >
         <EyeIcon />
       </Link>
-      <Link
-        href={`/configuracion/cups/${id}/editar`}
-        aria-label={`Editar ${nombre}`}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-      >
-        <PencilIcon />
-      </Link>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Eliminar ${nombre}`}
-        onClick={() => {
-          setError(null)
-          setOpen(true)
-        }}
-      >
-        <Trash2Icon />
-      </Button>
+      <SoloEscritura>
+        <Link
+          href={`/configuracion/cups/${id}/editar`}
+          aria-label={`Editar ${nombre}`}
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        >
+          <PencilIcon />
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Eliminar ${nombre}`}
+          onClick={() => {
+            setError(null)
+            setOpen(true)
+          }}
+        >
+          <Trash2Icon />
+        </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar CUPS</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará el CUPS {codigo} - {nombre}. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminar CUPS</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se eliminará el CUPS {codigo} - {nombre}. Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? <Loader2Icon className="animate-spin" /> : null}
+                Eliminar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SoloEscritura>
     </div>
   )
 }

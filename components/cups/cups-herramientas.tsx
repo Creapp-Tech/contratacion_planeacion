@@ -6,9 +6,7 @@ import { DownloadIcon, Loader2Icon, UploadIcon } from "lucide-react"
 
 import { importarCups } from "@/app/(dashboard)/configuracion/cups/actions"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import * as XLSX from "xlsx"
-import { cn } from "cn"
 
 export function CupsHerramientas() {
   const router = useRouter()
@@ -87,7 +85,7 @@ export function CupsHerramientas() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 lg:items-end">
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={manejarDescarga} variant="outline" size="sm">
           <DownloadIcon className="mr-2 h-4 w-4" />
@@ -112,19 +110,20 @@ export function CupsHerramientas() {
         </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Columnas: codigo* (6 dígitos), descripcion*, seccion*, version_resolucion*,
-        fecha_inicio* (YYYY-MM-DD), fecha_fin (opcional), activo (true/false).
+      <p className="max-w-md text-xs text-muted-foreground lg:text-right">
+        Columnas: codigo* (6 dígitos), nombre*, descripcion, capitulo, seccion,
+        extra_vii, extra_viii, extra_ix, version_resolucion*, fecha_inicio*
+        (YYYY-MM-DD), fecha_fin (opcional), activo (true/false).
       </p>
 
       {error ? (
-        <div className="mt-2 p-2 rounded bg-red-100 text-red-800 text-xs border border-red-200">
+        <div className="mt-2 max-w-md rounded border border-red-200 bg-red-100 p-2 text-xs text-red-800">
           {error}
         </div>
       ) : null}
 
       {resultado ? (
-        <div className="mt-2 p-2 rounded bg-green-100 text-green-800 text-xs border border-green-200">
+        <div className="mt-2 max-w-md rounded border border-green-200 bg-green-100 p-2 text-xs text-green-800">
           {resultado.insertadas} nuevas · {resultado.actualizadas} actualizadas ·
           {resultado.omitidas.length} omitidas.
           {resultado.omitidas.length > 0 ? (

@@ -8,12 +8,13 @@ import {
 } from "@/components/ui/table"
 
 import { CupAcciones } from "./cups-acciones"
+import type { CupsRow } from "@/lib/cups/queries"
 
 export function CupsTabla({
   cups,
   filtrado = false,
 }: {
-  cups: any[]
+  cups: CupsRow[]
   filtrado?: boolean
 }) {
   if (cups.length === 0) {
@@ -27,48 +28,48 @@ export function CupsTabla({
   }
 
   return (
-    <div className="rounded-xl border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Código</TableHead>
-            <TableHead>Grupo de servicio</TableHead>
-            <TableHead>Servicio</TableHead>
-            <TableHead>Descripción</TableHead>
-            <TableHead>Sección</TableHead>
-            <TableHead>Versión resolución</TableHead>
-            <TableHead>Fecha inicio</TableHead>
-            <TableHead>Fecha fin</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Código</TableHead>
+          <TableHead>Nombre</TableHead>
+          <TableHead>Capítulo</TableHead>
+          <TableHead>Sección</TableHead>
+          <TableHead>Grupo de servicio</TableHead>
+          <TableHead>Servicio</TableHead>
+          <TableHead>Versión resolución</TableHead>
+          <TableHead className="text-right">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {cups.map((cup) => (
+          <TableRow key={cup.id}>
+            <TableCell className="font-medium">{cup.codigo}</TableCell>
+            <TableCell>{cup.nombre}</TableCell>
+            <TableCell className="text-muted-foreground">
+              {cup.capitulo ?? "—"}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {cup.seccion ?? "—"}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {cup.grupos_servicio?.nombre ?? "—"}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {cup.servicios?.nombre ?? "—"}
+            </TableCell>
+            <TableCell>{cup.version_resolucion}</TableCell>
+            <TableCell>
+              <CupAcciones
+                id={cup.id}
+                nombre={cup.nombre}
+                codigo={cup.codigo}
+                activo={cup.activo}
+              />
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {cups.map((cup) => (
-            <TableRow key={cup.id}>
-              <TableCell className="font-medium">{cup.codigo}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {cup.grupos_servicio?.nombre ?? "—"}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {cup.servicios?.nombre ?? "—"}
-              </TableCell>
-              <TableCell>{cup.descripcion}</TableCell>
-              <TableCell className="text-muted-foreground">{cup.seccion}</TableCell>
-              <TableCell>{cup.version_resolucion}</TableCell>
-              <TableCell>{new Date(cup.fecha_inicio).toLocaleDateString()}</TableCell>
-              <TableCell>{cup.fecha_fin ? new Date(cup.fecha_fin).toLocaleDateString() : "—"}</TableCell>
-              <TableCell>
-                <CupAcciones
-                  id={cup.id}
-                  nombre={cup.descripcion}
-                  codigo={cup.codigo}
-                  activo={cup.activo}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+        ))}
+      </TableBody>
+    </Table>
   )
 }

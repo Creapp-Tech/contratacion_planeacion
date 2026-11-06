@@ -5,6 +5,7 @@ import { ArrowLeftIcon, DownloadIcon, PencilIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { FrecuenciaDetalleContenido } from "@/components/frecuencias/frecuencia-detalle-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -53,7 +54,9 @@ export default function FrecuenciaDetallePage({
             <Suspense fallback={null}>
               <div className="flex items-center gap-2">
                 <DescargarServiciosLink params={params} />
-                <EditarLink params={params} />
+                <SoloEscritura>
+                    <EditarLink params={params} />
+                  </SoloEscritura>
               </div>
             </Suspense>
           </CardAction>

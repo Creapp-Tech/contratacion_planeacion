@@ -7,6 +7,7 @@ import { EyeIcon, Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react"
 import { cn } from "cn"
 
 import { eliminarContrato } from "@/app/(dashboard)/contratos/actions"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -63,55 +64,57 @@ export function ContratoAcciones({
       >
         <EyeIcon />
       </Link>
-      <Link
-        href={`/contratos/${id}/editar${query}`}
-        aria-label={`Editar ${nombre}`}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-      >
-        <PencilIcon />
-      </Link>
-      <DuplicarContratoBoton id={id} nombre={nombre} volverA={volverA} />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Eliminar ${nombre}`}
-        onClick={() => {
-          setError(null)
-          setOpen(true)
-        }}
-      >
-        <Trash2Icon />
-      </Button>
+      <SoloEscritura>
+        <Link
+          href={`/contratos/${id}/editar${query}`}
+          aria-label={`Editar ${nombre}`}
+          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        >
+          <PencilIcon />
+        </Link>
+        <DuplicarContratoBoton id={id} nombre={nombre} volverA={volverA} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Eliminar ${nombre}`}
+          onClick={() => {
+            setError(null)
+            setOpen(true)
+          }}
+        >
+          <Trash2Icon />
+        </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar contrato</AlertDialogTitle>
-            <AlertDialogDescription>
-              El contrato {nombre} quedará inactivo y no aparecerá en el
-              listado. Esta acción no se puede deshacer desde la interfaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminar contrato</AlertDialogTitle>
+              <AlertDialogDescription>
+                El contrato {nombre} quedará inactivo y no aparecerá en el
+                listado. Esta acción no se puede deshacer desde la interfaz.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? <Loader2Icon className="animate-spin" /> : null}
+                Eliminar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SoloEscritura>
     </div>
   )
 }

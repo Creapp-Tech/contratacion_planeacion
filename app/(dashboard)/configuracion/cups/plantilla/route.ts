@@ -1,12 +1,16 @@
 import * as XLSX from "xlsx"
 
 import { requireSuperadmin } from "@/lib/auth/session"
-import { createAdminClient } from "@/lib/supabase/admin"
 
 const COLUMNAS_DATOS = [
   "codigo",
+  "nombre",
   "descripcion",
+  "capitulo",
   "seccion",
+  "extra_vii",
+  "extra_viii",
+  "extra_ix",
   "version_resolucion",
   "fecha_inicio",
   "fecha_fin",
@@ -23,7 +27,12 @@ export async function GET() {
     [
       "000001",
       "Consulta médica general",
+      "Consulta médica general ambulatoria",
+      "Capítulo 1",
       "Consultas externas",
+      "",
+      "",
+      "",
       "v1",
       "2024-01-01",
       "",
@@ -33,7 +42,12 @@ export async function GET() {
   hojaDatos["!cols"] = [
     { wch: 12 },
     { wch: 40 },
+    { wch: 40 },
+    { wch: 20 },
     { wch: 30 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 20 },
     { wch: 20 },
     { wch: 16 },
     { wch: 16 },
@@ -47,7 +61,7 @@ export async function GET() {
       "La hoja 'CUPS' es la que se importa. Reemplaza la fila de ejemplo por tus datos y no dejes filas vacías.",
     ],
     [
-      "Columnas: codigo* (6 dígitos), descripcion*, seccion*, version_resolucion*, fecha_inicio* (YYYY-MM-DD), fecha_fin (opcional, YYYY-MM-DD), activo (true/false, opcional, por defecto true).",
+      "Columnas: codigo* (6 dígitos), nombre*, descripcion, capitulo, seccion, extra_vii, extra_viii, extra_ix, version_resolucion*, fecha_inicio* (YYYY-MM-DD), fecha_fin (opcional, YYYY-MM-DD), activo (true/false, opcional, por defecto true).",
     ],
     [
       "El código CUPS debe tener exactamente 6 dígitos numéricos.",

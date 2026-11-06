@@ -1,10 +1,10 @@
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { listIpcNacional } from "@/lib/ipc/queries"
 
 import { IpcNacionalTabla } from "./ipc-nacional-tabla"
 
 export async function IpcNacionalContenido() {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const filas = await listIpcNacional()
 

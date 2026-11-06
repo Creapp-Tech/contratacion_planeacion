@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { AreasContenido } from "@/components/areas/areas-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -24,9 +25,11 @@ export default function AreasPage() {
             Administra el catálogo de áreas.
           </p>
         </div>
-        <Link href="/configuracion/areas/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon /> Nueva área
-        </Link>
+        <SoloEscritura>
+          <Link href="/configuracion/areas/nuevo" className={cn(buttonVariants())}>
+            <PlusIcon /> Nueva área
+          </Link>
+        </SoloEscritura>
       </div>
       <Suspense fallback={<TablaSkeleton />}>
         <AreasContenido />

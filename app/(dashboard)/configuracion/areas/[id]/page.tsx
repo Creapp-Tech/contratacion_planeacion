@@ -5,6 +5,7 @@ import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { AreaDetalleContenido } from "@/components/areas/area-detalle-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -51,7 +52,9 @@ export default function AreaDetallePage({
           <CardTitle className="font-heading">Detalle del área</CardTitle>
           <CardAction>
             <Suspense fallback={null}>
-              <EditarLink params={params} />
+              <SoloEscritura>
+                <EditarLink params={params} />
+              </SoloEscritura>
             </Suspense>
           </CardAction>
         </CardHeader>

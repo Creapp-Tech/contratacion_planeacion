@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { FrecuenciasContenido } from "@/components/frecuencias/frecuencias-contenido"
+import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -33,10 +34,12 @@ export default function FrecuenciasPage({
           </p>
         </div>
 
-        <Link href="/frecuencias/nuevo" className={cn(buttonVariants())}>
-          <PlusIcon />
-          Nueva frecuencia
-        </Link>
+        <SoloEscritura>
+          <Link href="/frecuencias/nuevo" className={cn(buttonVariants())}>
+            <PlusIcon />
+            Nueva frecuencia
+          </Link>
+        </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>

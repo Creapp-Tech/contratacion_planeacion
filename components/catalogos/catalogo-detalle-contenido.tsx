@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { CATALOGOS, type CatalogoDominio } from "@/lib/catalogos/dominios"
 import { getCatalogo } from "@/lib/catalogos/queries"
 
@@ -16,7 +16,7 @@ export async function CatalogoDetalleContenido({
   dominio: CatalogoDominio
   id: string
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const item = await getCatalogo(dominio, id)
 

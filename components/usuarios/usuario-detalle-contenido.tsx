@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { requireSuperadmin } from "@/lib/auth/session"
+import { requireAccesoModulo } from "@/lib/auth/session"
 import { getUsuario } from "@/lib/usuarios/queries"
 
 function formatFecha(value: string) {
@@ -24,7 +24,7 @@ export async function UsuarioDetalleContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireSuperadmin()
+  await requireAccesoModulo()
 
   const { id } = await params
   const usuario = await getUsuario(id)
