@@ -8,6 +8,8 @@ import { ContratoEditarContenido } from "@/components/contratos/contrato-editar-
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
+export const instant = false
+
 export const metadata: Metadata = {
   title: "Editar contrato",
 }
@@ -26,7 +28,7 @@ export default async function EditarContratoPage({
   const volverA = volverDesde((await searchParams).volver)
 
   return (
-    <div className="flex w-full flex-col gap-6 max-w-4xl mx-auto">
+    <div className="flex w-full flex-col gap-6">
       <Link
         href={volverA}
         className={cn(

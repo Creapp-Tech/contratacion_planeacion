@@ -667,7 +667,10 @@ export function ContratoForm({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-6 max-w-4xl mx-auto"
+      className={cn(
+        "flex flex-col gap-6",
+        mode === "ver" ? "mx-auto max-w-4xl" : "w-full"
+      )}
     >
       {serverError ? (
         <Alert variant="destructive">
