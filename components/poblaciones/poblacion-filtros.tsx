@@ -1,10 +1,11 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
-import { Loader2Icon, XIcon } from "lucide-react"
+import { useState, useTransition } from "react"
+import { Loader2Icon, SearchIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -98,6 +99,7 @@ export function PoblacionFiltros({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
+  const [sede, setSede] = useState(filtros.sede ?? "")
 
   const regimen = opcionesIdNombre("Todos los regímenes", opciones.regimenes)
   const asegurador = opcionesIdNombre(
@@ -145,7 +147,8 @@ export function PoblacionFiltros({
   }
 
   const hasFiltros = Boolean(
-    filtros.regimen_id ||
+    filtros.sede ||
+      filtros.regimen_id ||
       filtros.asegurador_eps_id ||
       filtros.regional ||
       filtros.departamento ||
@@ -154,6 +157,23 @@ export function PoblacionFiltros({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <form
+        className="relative w-full sm:w-64"
+        onSubmit={(event) => {
+          event.preventDefault()
+          updateParams({ sede: sede.trim() || undefined })
+        }}
+      >
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={sede}
+          onChange={(event) => setSede(event.target.value)}
+          placeholder="Buscar sede por nombre"
+          className="pl-8"
+          aria-label="Buscar sedes"
+        />
+      </form>
+
       <FiltroSelect
         id="filtro-regimen"
         value={filtros.regimen_id}
@@ -204,6 +224,7 @@ export function PoblacionFiltros({
           type="button"
           variant="ghost"
           onClick={() => {
+            setSede("")
             startTransition(() => router.replace(pathname))
           }}
         >

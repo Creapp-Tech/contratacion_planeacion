@@ -35,6 +35,7 @@ export type PoblacionFiltros = {
   regional?: string
   municipio?: string
   departamento?: string
+  sede?: string
 }
 
 export type OpcionesFiltrosPoblaciones = {
@@ -65,6 +66,10 @@ export async function listPoblaciones(
   let query = createAdminClient()
     .from("poblacion_aseguradora")
     .select(SELECT_POBLACION)
+
+  if (filtros.sede) {
+    query = query.ilike("sedes.nombre", `%${filtros.sede}%`)
+  }
 
   if (filtros.regimen_id) {
     query = query.eq("regimen_id", filtros.regimen_id)

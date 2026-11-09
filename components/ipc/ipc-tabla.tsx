@@ -1,12 +1,10 @@
 "use client"
 
-import { ArrowDownRightIcon, ArrowUpRightIcon, MinusIcon } from "lucide-react"
+import { ArrowDownRightIcon } from "lucide-react"
 import { cn } from "cn"
 
-import { Badge } from "@/components/ui/badge"
 import { StandardTable, type ColumnDef } from "@/components/ui/standard-table"
 import {
-  ETIQUETAS_ESTADO_IPC,
   formatearMoneda,
   formatearPorcentaje,
   formatearPuntos,
@@ -14,43 +12,6 @@ import {
 import type { IpcConReferencia } from "@/lib/ipc/queries"
 
 import { IpcAcciones } from "./ipc-acciones"
-
-function EstadoIpcBadge({ fila }: { fila: IpcConReferencia }) {
-  if (fila.estado === "debajo") {
-    return (
-      <Badge variant="destructive">
-        <ArrowDownRightIcon />
-        {ETIQUETAS_ESTADO_IPC.debajo}
-      </Badge>
-    )
-  }
-
-  if (fila.estado === "arriba") {
-    return (
-      <Badge
-        variant="outline"
-        className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-      >
-        <ArrowUpRightIcon />
-        {ETIQUETAS_ESTADO_IPC.arriba}
-      </Badge>
-    )
-  }
-
-  if (fila.estado === "igual") {
-    return (
-      <Badge
-        variant="outline"
-        className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-      >
-        <MinusIcon />
-        {ETIQUETAS_ESTADO_IPC.igual}
-      </Badge>
-    )
-  }
-
-  return <Badge variant="ghost">{ETIQUETAS_ESTADO_IPC.sin_referencia}</Badge>
-}
 
 export function IpcTabla({
   filas,
@@ -89,11 +50,6 @@ export function IpcTabla({
         row.contratos.aseguradores_eps?.nombre_eps ?? "—",
     },
     {
-      header: "Regional",
-      accessor: "regional",
-      render: (_value, row) => row.contratos.regionales?.nombre ?? "—",
-    },
-    {
       header: "Ejecución",
       accessor: "estado_ejecucion",
       render: (_value, row) => {
@@ -130,22 +86,6 @@ export function IpcTabla({
       render: (_value, row) => (
         <span className="tabular-nums">
           {formatearMoneda(row.costo_usuario)}
-        </span>
-      ),
-    },
-    {
-      header: "UPC Contributivo",
-      accessor: "upc",
-      render: (_value, row) => (
-        <span className="tabular-nums">{formatearMoneda(row.upc)}</span>
-      ),
-    },
-    {
-      header: "UPC Subsidiado",
-      accessor: "upc_subsidiado",
-      render: (_value, row) => (
-        <span className="tabular-nums">
-          {formatearMoneda(row.upc_subsidiado)}
         </span>
       ),
     },
@@ -193,11 +133,6 @@ export function IpcTabla({
             {formatearPuntos(row.diferencia)}
           </span>
         ),
-    },
-    {
-      header: "Estado",
-      accessor: "estado",
-      render: (_value, row) => <EstadoIpcBadge fila={row} />,
     },
     {
       header: "Acciones",

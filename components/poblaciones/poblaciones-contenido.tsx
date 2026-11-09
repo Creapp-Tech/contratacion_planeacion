@@ -32,6 +32,7 @@ export async function PoblacionesContenido({
       : (alcance.regional ?? SIN_REGIONAL),
     departamento: pick(params.departamento),
     municipio: pick(params.municipio),
+    sede: pick(params.sede),
   }
 
   const [filas, opciones] = await Promise.all([
@@ -50,6 +51,11 @@ export async function PoblacionesContenido({
       <PoblacionesTabla
         filas={filas}
         puedeEditar={puedeEditarPlaneacion(alcance.usuario.rol)}
+        mensajeVacio={
+          filtros.sede
+            ? `No se encontraron sedes que coincidan con “${filtros.sede}”.`
+            : undefined
+        }
       />
     </div>
   )

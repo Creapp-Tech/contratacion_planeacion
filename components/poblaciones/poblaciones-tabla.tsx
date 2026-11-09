@@ -41,9 +41,11 @@ function formatearFecha(fecha: string | null) {
 export function PoblacionesTabla({
   filas,
   puedeEditar = false,
+  mensajeVacio,
 }: {
   filas: PoblacionFila[]
   puedeEditar?: boolean
+  mensajeVacio?: string
 }) {
   const resumen = resumenPoblaciones(filas)
 
@@ -61,7 +63,7 @@ export function PoblacionesTabla({
 
       {filas.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Aún no hay poblaciones registradas — crea la primera.
+          {mensajeVacio ?? "Aún no hay poblaciones registradas — crea la primera."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border">
