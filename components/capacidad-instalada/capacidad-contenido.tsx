@@ -59,7 +59,8 @@ export async function CapacidadContenido({
     alcance.verTodo || mismaRegional(regional, alcance.regional)
 
   const params = await searchParams
-  const tab = pick(params.tab) === "poblacion" ? "poblacion" : "infraestructura"
+  const tab =
+    pick(params.tab) === "infraestructura" ? "infraestructura" : "poblacion"
 
   if (tab === "poblacion") {
     const sedes = (await listSedesPoblacion()).filter((sede) =>
@@ -118,7 +119,7 @@ export async function CapacidadContenido({
 
   const filtros: FiltrosInfra = {
     regional: pick(params.i_regional),
-    sede: pick(params.i_sede),
+    sedes: parseSedes(pick(params.i_sede)),
     areas:
       areasParametro ??
       (areasDefecto.length > 0 ? areasDefecto : undefined),

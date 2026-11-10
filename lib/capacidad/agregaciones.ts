@@ -73,7 +73,7 @@ export type OpcionesPoblacion = {
 
 export type FiltrosInfra = {
   regional?: string
-  sede?: string
+  sedes?: string[]
   areas?: string[]
   tipoPoblacion: "activa" | "pagada" | "personalizada"
   personalizada: number
@@ -416,7 +416,7 @@ export function resumenInfraestructura(
         !filtros.regional ||
         ((sede.regional ?? "").trim() || "Sin regional") === filtros.regional
     )
-    .filter((sede) => !filtros.sede || sede.id === filtros.sede)
+    .filter((sede) => !filtros.sedes || filtros.sedes.includes(sede.id))
 
   let poblacionActiva = 0
   let poblacionPagada = 0

@@ -667,19 +667,15 @@ export function ContratoForm({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className={cn(
-        "flex flex-col gap-6",
-        mode === "ver" ? "mx-auto max-w-4xl" : "w-full"
-      )}
+      className="grid grid-cols-1 gap-6 xl:grid-cols-2"
     >
       {serverError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="xl:col-span-2">
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-5rem)]">
-        <Card>
+      <Card className="xl:col-span-2">
         <CardHeader>
           <CardTitle className="font-heading">Datos del contrato</CardTitle>
           <CardDescription>
@@ -834,7 +830,7 @@ export function ContratoForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="xl:col-span-2">
         <CardHeader>
           <CardTitle className="font-heading">Asignación y cobertura</CardTitle>
           <CardDescription>
@@ -1022,6 +1018,91 @@ export function ContratoForm({
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="font-heading">
+            Programas y observaciones
+          </CardTitle>
+          <CardDescription>
+            Programas asociados, ubicación y notas del contrato.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup className="gap-4">
+            <Field orientation="horizontal">
+              <FieldLabel htmlFor="tiene_programas">
+                Cuenta con programas
+              </FieldLabel>
+              <Controller
+                control={control}
+                name="tiene_programas"
+                render={({ field }) => (
+                  <Switch
+                    id="tiene_programas"
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked)
+                      if (!checked) setValue("programa_ids", [])
+                    }}
+                    disabled={readonly}
+                  />
+                )}
+              />
+            </Field>
+
+            {tieneProgramas ? (
+              <Field data-invalid={!!errors.programa_ids}>
+                <FieldLabel>Programas</FieldLabel>
+                <Controller
+                  control={control}
+                  name="programa_ids"
+                  render={({ field }) => (
+                    <MultiSelectChips
+                      options={opciones.programas.map((programa) => ({
+                        value: programa.id,
+                        label: programa.nombre,
+                      }))}
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      disabled={readonly}
+                      emptyMessage="No hay programas configurados"
+                    />
+                  )}
+                />
+                <FieldError errors={[errors.programa_ids]} />
+              </Field>
+            ) : null}
+
+            <Field data-invalid={!!errors.url_ubicacion}>
+              <FieldLabel htmlFor="url_ubicacion">
+                URL de ubicación del contrato
+              </FieldLabel>
+              <Input
+                id="url_ubicacion"
+                type="url"
+                placeholder="https://..."
+                disabled={readonly}
+                aria-invalid={!!errors.url_ubicacion}
+                {...register("url_ubicacion")}
+              />
+              <FieldError errors={[errors.url_ubicacion]} />
+            </Field>
+
+            <Field data-invalid={!!errors.notas}>
+              <FieldLabel htmlFor="notas">Notas y observaciones</FieldLabel>
+              <Textarea
+                id="notas"
+                rows={4}
+                disabled={readonly}
+                aria-invalid={!!errors.notas}
+                {...register("notas")}
+              />
+              <FieldError errors={[errors.notas]} />
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+
+      <Card className="xl:col-span-2">
         <CardHeader>
           <CardTitle className="font-heading">Vigencia y valores</CardTitle>
           <CardDescription>
@@ -1334,93 +1415,8 @@ export function ContratoForm({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading">
-            Programas y observaciones
-          </CardTitle>
-          <CardDescription>
-            Programas asociados, ubicación y notas del contrato.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup className="gap-4">
-            <Field orientation="horizontal">
-              <FieldLabel htmlFor="tiene_programas">
-                Cuenta con programas
-              </FieldLabel>
-              <Controller
-                control={control}
-                name="tiene_programas"
-                render={({ field }) => (
-                  <Switch
-                    id="tiene_programas"
-                    checked={field.value}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked)
-                      if (!checked) setValue("programa_ids", [])
-                    }}
-                    disabled={readonly}
-                  />
-                )}
-              />
-            </Field>
-
-            {tieneProgramas ? (
-              <Field data-invalid={!!errors.programa_ids}>
-                <FieldLabel>Programas</FieldLabel>
-                <Controller
-                  control={control}
-                  name="programa_ids"
-                  render={({ field }) => (
-                    <MultiSelectChips
-                      options={opciones.programas.map((programa) => ({
-                        value: programa.id,
-                        label: programa.nombre,
-                      }))}
-                      value={field.value ?? []}
-                      onChange={field.onChange}
-                      disabled={readonly}
-                      emptyMessage="No hay programas configurados"
-                    />
-                  )}
-                />
-                <FieldError errors={[errors.programa_ids]} />
-              </Field>
-            ) : null}
-
-            <Field data-invalid={!!errors.url_ubicacion}>
-              <FieldLabel htmlFor="url_ubicacion">
-                URL de ubicación del contrato
-              </FieldLabel>
-              <Input
-                id="url_ubicacion"
-                type="url"
-                placeholder="https://..."
-                disabled={readonly}
-                aria-invalid={!!errors.url_ubicacion}
-                {...register("url_ubicacion")}
-              />
-              <FieldError errors={[errors.url_ubicacion]} />
-            </Field>
-
-            <Field data-invalid={!!errors.notas}>
-              <FieldLabel htmlFor="notas">Notas y observaciones</FieldLabel>
-              <Textarea
-                id="notas"
-                rows={4}
-                disabled={readonly}
-                aria-invalid={!!errors.notas}
-                {...register("notas")}
-              />
-              <FieldError errors={[errors.notas]} />
-            </Field>
-          </FieldGroup>
-        </CardContent>
-      </Card>
-
       {esDocumento ? (
-        <Card>
+        <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle className="font-heading">Documento modificatorio / Otrosí / Anexo</CardTitle>
             <CardDescription>
@@ -1519,9 +1515,8 @@ export function ContratoForm({
           </CardContent>
         </Card>
       ) : null}
-      </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 xl:col-span-2">
         <Link
           href={volverA}
           className={cn(buttonVariants({ variant: "outline" }))}

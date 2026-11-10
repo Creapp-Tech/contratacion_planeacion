@@ -51,6 +51,10 @@ export function MultiSelect({
     setAbierto(true)
   }
 
+  const todasMarcadas =
+    opciones.length > 0 && opciones.every((opcion) => seleccion.includes(opcion.id))
+  const ningunaMarcada = seleccion.length === 0
+
   const etiqueta =
     seleccion.length === 0
       ? placeholderNinguna
@@ -76,32 +80,51 @@ export function MultiSelect({
       </button>
 
       {abierto ? (
-        <div
-          role="listbox"
-          className="absolute top-full left-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
-        >
+        <div className="absolute top-full left-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-md">
           {opciones.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
               {mensajeVacio}
             </p>
           ) : (
-            opciones.map((opcion) => {
-              const marcado = seleccion.includes(opcion.id)
-              return (
-                <label
-                  key={opcion.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            <>
+              <div className="sticky top-0 -mx-1 flex items-center justify-between gap-2 border-b bg-popover px-2 py-1.5">
+                <button
+                  type="button"
+                  onClick={() => onChange(opciones.map((opcion) => opcion.id))}
+                  disabled={todasMarcadas}
+                  className="rounded-sm text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <input
-                    type="checkbox"
-                    checked={marcado}
-                    onChange={() => alternar(opcion.id)}
-                    className="size-4 accent-primary"
-                  />
-                  <span className="truncate">{opcion.nombre}</span>
-                </label>
-              )
-            })
+                  Seleccionar todas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange([])}
+                  disabled={ningunaMarcada}
+                  className="rounded-sm text-xs font-medium text-muted-foreground outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Desmarcar todas
+                </button>
+              </div>
+              <div role="listbox" aria-multiselectable="true">
+                {opciones.map((opcion) => {
+                  const marcado = seleccion.includes(opcion.id)
+                  return (
+                    <label
+                      key={opcion.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={marcado}
+                        onChange={() => alternar(opcion.id)}
+                        className="size-4 accent-primary"
+                      />
+                      <span className="truncate">{opcion.nombre}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       ) : null}

@@ -1,6 +1,7 @@
 import { mismaRegional, requireAlcancePlaneacion } from "@/lib/auth/session"
 import {
   resumenInfraestructura,
+  SEDES_NINGUNA,
   type FiltrosInfra,
 } from "@/lib/capacidad/agregaciones"
 import {
@@ -11,6 +12,13 @@ import { construirCsv } from "@/lib/frecuencias/importar"
 
 function pick(value: string | null): string | undefined {
   return value && value.length > 0 ? value : undefined
+}
+
+function parseSedes(value: string | undefined): string[] | undefined {
+  if (!value) return undefined
+  if (value === SEDES_NINGUNA) return []
+  const valores = value.split(",").filter((item) => item.length > 0)
+  return valores.length > 0 ? valores : undefined
 }
 
 export async function GET(request: Request) {
@@ -29,7 +37,7 @@ export async function GET(request: Request) {
 
   const filtros: FiltrosInfra = {
     regional: pick(searchParams.get("i_regional")),
-    sede: pick(searchParams.get("i_sede")),
+    sedes: parseSedes(pick(searchParams.get("i_sede"))),
     tipoPoblacion: "activa",
     personalizada: 0,
   }

@@ -4,6 +4,7 @@ import { DownloadIcon } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import {
   resumenInfraestructura,
+  SEDES_NINGUNA,
   type FiltrosInfra,
   type OpcionesInfra,
 } from "@/lib/capacidad/agregaciones"
@@ -30,7 +31,12 @@ export function InfraVista({
 
   const parametros = new URLSearchParams()
   if (filtros.regional) parametros.set("i_regional", filtros.regional)
-  if (filtros.sede) parametros.set("i_sede", filtros.sede)
+  if (filtros.sedes) {
+    parametros.set(
+      "i_sede",
+      filtros.sedes.length > 0 ? filtros.sedes.join(",") : SEDES_NINGUNA
+    )
+  }
   const exportHref = `/capacidad-instalada/exportar${
     parametros.size > 0 ? `?${parametros.toString()}` : ""
   }`

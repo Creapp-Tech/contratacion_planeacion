@@ -16,11 +16,13 @@ export function CapacidadTabs() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activa: TabCapacidad =
-    searchParams.get("tab") === "poblacion" ? "poblacion" : "infraestructura"
+    searchParams.get("tab") === "infraestructura"
+      ? "infraestructura"
+      : "poblacion"
 
   function crearHref(tab: TabCapacidad) {
     const params = new URLSearchParams(searchParams.toString())
-    if (tab === "infraestructura") {
+    if (tab === "poblacion") {
       params.delete("tab")
     } else {
       params.set("tab", tab)

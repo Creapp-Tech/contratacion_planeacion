@@ -17,6 +17,7 @@ import type { FiltrosInfra, OpcionesInfra } from "@/lib/capacidad/agregaciones"
 import {
   AREAS_NINGUNA,
   areasInfraPorDefecto,
+  SEDES_NINGUNA,
 } from "@/lib/capacidad/agregaciones"
 
 import { MultiSelect } from "../multi-select"
@@ -62,18 +63,13 @@ export function InfraFiltros({
   const sedesVisibles = opciones.sedes.filter(
     (sede) => !filtros.regional || sede.regional === filtros.regional
   )
+  const seleccionSedes = filtros.sedes
+    ? filtros.sedes.filter((id) => sedesVisibles.some((sede) => sede.id === id))
+    : sedesVisibles.map((sede) => sede.id)
 
-  const sedeItems = Object.fromEntries([
-    [ALL, "Todas las sedes"],
-    ...sedesVisibles.map((sede) => [sede.id, sede.nombre]),
-  ])
   const regionalOptions = [
     { value: ALL, label: "Todas las regionales" },
     ...opciones.regionales.map((value) => ({ value, label: value })),
-  ]
-  const sedeOptions = [
-    { value: ALL, label: "Todas las sedes" },
-    ...sedesVisibles.map((sede) => ({ value: sede.id, label: sede.nombre })),
   ]
   const tipoOptions = [
     { value: "activa", label: "Activa" },
@@ -93,7 +89,7 @@ export function InfraFiltros({
 
   const hayFiltros = Boolean(
     filtros.regional ||
-      filtros.sede ||
+      filtros.sedes !== undefined ||
       areasDifieren ||
       filtros.tipoPoblacion !== "activa"
   )
@@ -129,28 +125,26 @@ export function InfraFiltros({
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="infra-sede" className="text-xs text-muted-foreground">
-          Sede
+          Sedes
         </Label>
-        <Select
-          value={filtros.sede ?? ALL}
-          onValueChange={(next) =>
+        <MultiSelect
+          id="infra-sede"
+          opciones={sedesVisibles}
+          seleccion={seleccionSedes}
+          onChange={(ids) =>
             actualizar({
-              [PARAM.sede]: next === ALL || next == null ? undefined : next,
+              [PARAM.sede]:
+                ids.length === 0
+                  ? SEDES_NINGUNA
+                  : ids.length === sedesVisibles.length
+                    ? undefined
+                    : ids.join(","),
             })
           }
-          items={sedeItems}
-        >
-          <SelectTrigger id="infra-sede" className="w-full sm:w-52">
-            <SelectValue placeholder="Sede" />
-          </SelectTrigger>
-          <SelectContent>
-            {sedeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholderTodas="Todas las sedes"
+          placeholderNinguna="Ninguna sede"
+          mensajeVacio="Sin sedes disponibles."
+        />
       </div>
 
       <div className="flex flex-col gap-1">
