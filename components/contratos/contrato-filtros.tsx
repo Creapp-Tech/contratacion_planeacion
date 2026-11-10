@@ -12,9 +12,10 @@ import { cn } from "@/lib/utils"
 import type { ContratoFiltros, OpcionesContrato } from "@/lib/contratos/queries"
 
 const TODOS = "__todos__"
+const NINGUNO = "__ninguno__"
 
-function idsReales(seleccion: string[], todosLosIds: string[]): string[] {
-  return seleccion.filter((v) => v !== TODOS)
+function idsReales(seleccion: string[]): string[] {
+  return seleccion.filter((v) => v !== TODOS && v !== NINGUNO)
 }
 
 function estaTodoSeleccionado(
@@ -31,7 +32,7 @@ function estaTodoSeleccionado(
 
 /**
  * Dropdown múltiple para filtros. Permite seleccionar una o varias opciones
- * e incluye una opción "Seleccionar todos" al inicio.
+ * e incluye las opciones "Seleccionar todos" y "Desmarcar todos" al inicio.
  */
 function FiltroSelectMulti({
   id,
@@ -58,10 +59,26 @@ function FiltroSelectMulti({
       : value
   )
 
+  // Sincroniza la selección interna cuando el padre la reinicia (p. ej. "Limpiar").
+  const [valorPrevio, setValorPrevio] = useState(value)
+  if (value !== valorPrevio) {
+    setValorPrevio(value)
+    setPrimitiveValue(
+      estaTodoSeleccionado(value, todosLosIds) ? [TODOS, ...todosLosIds] : value
+    )
+  }
+
   const seleccionadaComoTodos = primitiveValue.includes(TODOS)
 
   function handleValueChange(next: string[] | null) {
     const arr = next ?? []
+
+    if (arr.includes(NINGUNO)) {
+      // El usuario tocó "Desmarcar todos": se limpia el grupo.
+      setPrimitiveValue([])
+      onChange([])
+      return
+    }
 
     if (arr.includes(TODOS)) {
       // El usuario tocó "Seleccionar todos": se selecciona todo el grupo.
@@ -80,11 +97,12 @@ function FiltroSelectMulti({
     .map((o) => o.label)
 
   const valorMostrado =
-    seleccionadaComoTodos || etiquetas.length === todosLosIds.length
+    seleccionadaComoTodos ||
+    (todosLosIds.length > 0 && etiquetas.length === todosLosIds.length)
       ? etiquetaTodos
       : etiquetas.length > 0
         ? etiquetas.join(", ")
-      : placeholder
+        : placeholder
 
   return (
     <SelectPrimitive.Root
@@ -96,11 +114,11 @@ function FiltroSelectMulti({
     >
       <SelectPrimitive.Trigger
         className={cn(
-          "w-full flex items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          "w-full flex items-center justify-between gap-1.5 overflow-hidden rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           seleccionadaComoTodos ? "bg-accent text-accent-foreground" : ""
         )}
       >
-        <SelectPrimitive.Value className="flex flex-1 text-left">
+        <SelectPrimitive.Value className="flex min-w-0 flex-1 truncate text-left">
           {seleccionadaComoTodos || etiquetas.length > 0 ? (
             valorMostrado
           ) : (
@@ -175,6 +193,8 @@ export function ContratoFiltros({
   const [regionalSeleccionada, setRegionalSeleccionada] = useState(
     filtros.regional ?? []
   )
+  const [estadoLegalizacionSeleccionado, setEstadoLegalizacionSeleccionado] =
+    useState(filtros.estadoLegalizacion ?? [])
 
   if (filtros.q !== qPrevio) {
     setQPrevio(filtros.q)
@@ -183,6 +203,7 @@ export function ContratoFiltros({
 
   const aseguradorItems = Object.fromEntries([
     [TODOS, "Seleccionar todos"],
+    [NINGUNO, "Desmarcar todos"],
     ...opciones.aseguradores.map((asegurador) => [
       asegurador.id,
       asegurador.nombre_eps,
@@ -191,6 +212,7 @@ export function ContratoFiltros({
 
   const aseguradorOptions = [
     { value: TODOS, label: "Seleccionar todos" },
+    { value: NINGUNO, label: "Desmarcar todos" },
     ...opciones.aseguradores.map((asegurador) => ({
       value: asegurador.id,
       label: asegurador.nombre_eps,
@@ -201,11 +223,13 @@ export function ContratoFiltros({
 
   const regionalItems = Object.fromEntries([
     [TODOS, "Seleccionar todos"],
+    [NINGUNO, "Desmarcar todos"],
     ...opciones.regionales.map((regional) => [regional.id, regional.nombre]),
   ])
 
   const regionalOptions = [
     { value: TODOS, label: "Seleccionar todos" },
+    { value: NINGUNO, label: "Desmarcar todos" },
     ...opciones.regionales.map((regional) => ({
       value: regional.id,
       label: regional.nombre,
@@ -213,6 +237,23 @@ export function ContratoFiltros({
   ]
 
   const regionalIds = opciones.regionales.map((r) => r.id)
+
+  const estadoLegalizacionItems = Object.fromEntries([
+    [TODOS, "Seleccionar todos"],
+    [NINGUNO, "Desmarcar todos"],
+    ...opciones.estadosLegalizacion.map((estado) => [estado.id, estado.nombre]),
+  ])
+
+  const estadoLegalizacionOptions = [
+    { value: TODOS, label: "Seleccionar todos" },
+    { value: NINGUNO, label: "Desmarcar todos" },
+    ...opciones.estadosLegalizacion.map((estado) => ({
+      value: estado.id,
+      label: estado.nombre,
+    })),
+  ]
+
+  const estadoLegalizacionIds = opciones.estadosLegalizacion.map((e) => e.id)
 
   function updateParams(next: Record<string, string | string[] | undefined>) {
     const params = new URLSearchParams(searchParams.toString())
@@ -233,7 +274,7 @@ export function ContratoFiltros({
 
   function onChangeAsegurador(siguiente: string[]) {
     setAseguradorSeleccionado(siguiente)
-    const reales = idsReales(siguiente, aseguradorIds)
+    const reales = idsReales(siguiente)
     updateParams({
       asegurador: reales.length > 0 ? reales : undefined,
     })
@@ -241,23 +282,32 @@ export function ContratoFiltros({
 
   function onChangeRegional(siguiente: string[]) {
     setRegionalSeleccionada(siguiente)
-    const reales = idsReales(siguiente, regionalIds)
+    const reales = idsReales(siguiente)
     updateParams({
       regional: reales.length > 0 ? reales : undefined,
+    })
+  }
+
+  function onChangeEstadoLegalizacion(siguiente: string[]) {
+    setEstadoLegalizacionSeleccionado(siguiente)
+    const reales = idsReales(siguiente)
+    updateParams({
+      legalizacion: reales.length > 0 ? reales : undefined,
     })
   }
 
   const hasFiltros = Boolean(
     filtros.q ||
       (filtros.asegurador?.length ?? 0) > 0 ||
-      (filtros.regional?.length ?? 0) > 0
+      (filtros.regional?.length ?? 0) > 0 ||
+      (filtros.estadoLegalizacion?.length ?? 0) > 0
   )
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="w-full min-w-0 sm:w-1/2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap">
+      <div className="w-full min-w-0 sm:flex-[1.5]">
         <form
-          className="relative flex-1 sm:min-w-64"
+          className="relative flex-1"
           onSubmit={(event) => {
             event.preventDefault()
             updateParams({ q: q.trim() || undefined })
@@ -274,7 +324,7 @@ export function ContratoFiltros({
         </form>
       </div>
 
-      <div className="w-full min-w-0 sm:w-1/4">
+      <div className="w-full min-w-0 sm:min-w-40 sm:flex-1 lg:min-w-0">
         <FiltroSelectMulti
           id="filtro-asegurador"
           value={aseguradorSeleccionado}
@@ -288,7 +338,7 @@ export function ContratoFiltros({
       </div>
 
       {verRegional ? (
-        <div className="w-full min-w-0 sm:w-1/4">
+        <div className="w-full min-w-0 sm:min-w-40 sm:flex-1 lg:min-w-0">
           <FiltroSelectMulti
             id="filtro-regional"
             value={regionalSeleccionada}
@@ -302,6 +352,19 @@ export function ContratoFiltros({
         </div>
       ) : null}
 
+      <div className="w-full min-w-0 sm:min-w-40 sm:flex-1 lg:min-w-0">
+        <FiltroSelectMulti
+          id="filtro-legalizacion"
+          value={estadoLegalizacionSeleccionado}
+          placeholder="Estado de legalización"
+          items={estadoLegalizacionItems}
+          options={estadoLegalizacionOptions}
+          onChange={onChangeEstadoLegalizacion}
+          todosLosIds={estadoLegalizacionIds}
+          etiquetaTodos="Todos los estados"
+        />
+      </div>
+
       {hasFiltros ? (
         <Button
           type="button"
@@ -310,6 +373,7 @@ export function ContratoFiltros({
             setQ("")
             setAseguradorSeleccionado([])
             setRegionalSeleccionada([])
+            setEstadoLegalizacionSeleccionado([])
             startTransition(() => router.replace(pathname))
           }}
         >

@@ -54,6 +54,7 @@ export async function ContratosContenido({
       : alcance.regionalId
         ? [alcance.regionalId]
         : undefined,
+    estadoLegalizacion: pickArray(params.legalizacion),
     vista,
   }
 
@@ -85,6 +86,7 @@ export async function ContratosContenido({
           q: filtros.q,
           asegurador: filtros.asegurador,
           regional: alcance.verTodo ? filtros.regional : undefined,
+          estadoLegalizacion: filtros.estadoLegalizacion,
         }}
         verRegional={alcance.verTodo}
       />
@@ -109,6 +111,7 @@ export async function ContratosContenido({
             filtros.q ||
               filtros.asegurador ||
               (alcance.verTodo && filtros.regional) ||
+              filtros.estadoLegalizacion ||
               vigencia !== "todos"
           )}
         />

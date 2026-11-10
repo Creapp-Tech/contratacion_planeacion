@@ -120,8 +120,8 @@ export function ResumenContratos({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <TarjetaResumen
-        titulo="Aseguradores únicos"
-        detalle="EPS con contratos"
+        titulo="Contratos en ejecución"
+        detalle="Aseguradores con los que VIVA1A tiene contratos actualmente en ejecución."
         valor={aseguradoresUnicos}
         icono={<Building2Icon className="size-5 text-muted-foreground" />}
       />

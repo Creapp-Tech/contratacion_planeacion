@@ -136,6 +136,7 @@ export type ContratoFiltros = {
   q?: string
   asegurador?: string[]
   regional?: string[]
+  estadoLegalizacion?: string[]
   vista?: VistaContratos
 }
 
@@ -385,6 +386,13 @@ export async function listContratos(
   const aseguradoresSeleccionados = (filtros.asegurador ?? []).filter(esUuid)
   if (aseguradoresSeleccionados.length > 0) {
     query = query.in("asegurador_id", aseguradoresSeleccionados)
+  }
+
+  const estadosLegalizacionSeleccionados = (
+    filtros.estadoLegalizacion ?? []
+  ).filter(esUuid)
+  if (estadosLegalizacionSeleccionados.length > 0) {
+    query = query.in("estado_legalizacion_id", estadosLegalizacionSeleccionados)
   }
 
   if (filtros.q) {
