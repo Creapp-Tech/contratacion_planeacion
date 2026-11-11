@@ -38,6 +38,7 @@ export const contratoSchema = z
       .min(1, "Ingresa el nombre del contrato")
       .max(200, "El nombre es demasiado largo"),
     asegurador_id: z.string().uuid("Selecciona el asegurador"),
+    pais_id: z.string().uuid("Selecciona el país"),
     numero_contrato: z
       .string()
       .trim()

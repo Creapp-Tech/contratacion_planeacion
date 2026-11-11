@@ -49,6 +49,48 @@ export function esRegionalNacional(nombre: string | null | undefined): boolean {
   return (nombre ?? "").trim().toLowerCase() === REGIONAL_NACIONAL.toLowerCase()
 }
 
+// País que separa los contratos nacionales de los internacionales.
+export const PAIS_NACIONAL = "Colombia"
+
+export type AmbitoContratos = "nacional" | "internacional"
+
+export const RUTAS_CONTRATOS: Record<AmbitoContratos, string> = {
+  nacional: "/contratos",
+  internacional: "/contratos-internacionales",
+}
+
+export function esPaisNacional(
+  nombre: string | null | undefined
+): boolean {
+  return (nombre ?? "").trim().toLowerCase() === PAIS_NACIONAL.toLowerCase()
+}
+
+/**
+ * Rutas a las que el detalle/edición puede regresar con `?volver=`.
+ * Cualquier otro valor se ignora para no permitir redirecciones arbitrarias.
+ */
+export function volverContratosDesde(
+  value: string | string[] | undefined
+): string {
+  const ruta = Array.isArray(value) ? value[0] : value
+  if (
+    ruta === "/historial" ||
+    ruta === "/contratos" ||
+    ruta === "/contratos-internacionales"
+  ) {
+    return ruta
+  }
+  return RUTAS_CONTRATOS.nacional
+}
+
+export function etiquetaVolverContratos(ruta: string): string {
+  if (ruta === "/historial") return "Volver al historial"
+  if (ruta === RUTAS_CONTRATOS.internacional) {
+    return "Volver a contratos internacionales"
+  }
+  return "Volver a contratos nacionales"
+}
+
 export type Periodicidad = (typeof PERIODICIDADES)[number]["value"]
 
 export const PERIODICIDAD_VALUES: [Periodicidad, ...Periodicidad[]] = [

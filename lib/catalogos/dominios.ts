@@ -1,4 +1,5 @@
 import {
+  Flag,
   FolderKanban,
   FolderTree,
   Layers,
@@ -18,6 +19,7 @@ export type CatalogoDominio =
   | "categoria"
   | "programa"
   | "responsable"
+  | "pais"
 
 export interface CatalogoConfig {
   dominio: CatalogoDominio
@@ -91,6 +93,14 @@ export const CATALOGOS: Record<CatalogoDominio, CatalogoConfig> = {
     singular: "responsable",
     ruta: "/configuracion/responsables",
     icono: Users,
+    usaDescripcion: false,
+  },
+  pais: {
+    dominio: "pais",
+    titulo: "Países",
+    singular: "país",
+    ruta: "/configuracion/paises",
+    icono: Flag,
     usaDescripcion: false,
   },
 }

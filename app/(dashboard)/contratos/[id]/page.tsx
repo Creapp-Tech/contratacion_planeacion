@@ -9,15 +9,15 @@ import { DuplicarContratoBoton } from "@/components/contratos/duplicar-contrato"
 import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  etiquetaVolverContratos,
+  volverContratosDesde,
+} from "@/lib/contratos/constantes"
 
 export const instant = false
 
 export const metadata: Metadata = {
   title: "Detalle de contrato",
-}
-
-function volverDesde(value: string | string[] | undefined) {
-  return value === "/historial" ? "/historial" : "/contratos"
 }
 
 export default async function ContratoDetallePage({
@@ -27,7 +27,7 @@ export default async function ContratoDetallePage({
   params: Promise<{ id: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const volverA = volverDesde((await searchParams).volver)
+  const volverA = volverContratosDesde((await searchParams).volver)
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -39,7 +39,7 @@ export default async function ContratoDetallePage({
         )}
       >
         <ArrowLeftIcon />
-        {volverA === "/historial" ? "Volver al historial" : "Volver a contratos"}
+        {etiquetaVolverContratos(volverA)}
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -60,7 +60,7 @@ export default async function ContratoDetallePage({
       </div>
 
       <Suspense fallback={<Skeleton className="h-96 w-full rounded-xl" />}>
-        <ContratoDetalleContenido params={params} />
+        <ContratoDetalleContenido params={params} volverA={volverA} />
       </Suspense>
     </div>
   )
@@ -94,10 +94,7 @@ async function EditarLink({
   volverA: string
 }) {
   const { id } = await params
-  const href =
-    volverA === "/historial"
-      ? `/contratos/${id}/editar?volver=${encodeURIComponent(volverA)}`
-      : `/contratos/${id}/editar`
+  const href = `/contratos/${id}/editar?volver=${encodeURIComponent(volverA)}`
 
   return (
     <Link

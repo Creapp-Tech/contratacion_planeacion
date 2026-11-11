@@ -49,7 +49,7 @@ export function DuplicarContratoBoton({
       }
       setOpen(false)
       const destino =
-        volverA === "/historial"
+        volverA && volverA !== "/contratos"
           ? `/contratos/${result.id}/editar?volver=${encodeURIComponent(volverA)}`
           : `/contratos/${result.id}/editar`
       router.push(destino)

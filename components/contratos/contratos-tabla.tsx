@@ -49,12 +49,14 @@ const VARIANTE_VIGENCIA: Record<
 export function ContratosTabla({
   contratos,
   filtrado = false,
+  mostrarPais = false,
   mensajeVacio = "No hay contratos registrados.",
   volverA,
   vigencia = "todos",
 }: {
   contratos: ContratoRow[]
   filtrado?: boolean
+  mostrarPais?: boolean
   mensajeVacio?: string
   volverA?: string
   vigencia?: FiltroVigencia
@@ -95,6 +97,16 @@ export function ContratosTabla({
       accessor: "aseguradores_eps",
       render: (_value, row) => row.aseguradores_eps?.nombre_eps ?? "—",
     },
+    ...(mostrarPais
+      ? [
+          {
+            header: "País",
+            accessor: "pais",
+            render: (_value: unknown, row: ContratoRow) =>
+              row.pais?.nombre ?? "—",
+          } satisfies ColumnDef<ContratoRow>,
+        ]
+      : []),
     {
       header: "Regionales",
       accessor: "regionales",

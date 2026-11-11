@@ -36,7 +36,7 @@ export default function HistorialPage({
           className={cn(buttonVariants({ variant: "outline" }))}
         >
           <ArrowLeftIcon />
-          Contratos en ejecución
+          Contratos nacionales
         </Link>
       </div>
 

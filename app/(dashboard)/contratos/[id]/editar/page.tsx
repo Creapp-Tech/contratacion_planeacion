@@ -7,15 +7,15 @@ import { cn } from "cn"
 import { ContratoEditarContenido } from "@/components/contratos/contrato-editar-contenido"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  etiquetaVolverContratos,
+  volverContratosDesde,
+} from "@/lib/contratos/constantes"
 
 export const instant = false
 
 export const metadata: Metadata = {
   title: "Editar contrato",
-}
-
-function volverDesde(value: string | string[] | undefined) {
-  return value === "/historial" ? "/historial" : "/contratos"
 }
 
 export default async function EditarContratoPage({
@@ -25,7 +25,7 @@ export default async function EditarContratoPage({
   params: Promise<{ id: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const volverA = volverDesde((await searchParams).volver)
+  const volverA = volverContratosDesde((await searchParams).volver)
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -37,7 +37,7 @@ export default async function EditarContratoPage({
         )}
       >
         <ArrowLeftIcon />
-        {volverA === "/historial" ? "Volver al historial" : "Volver a contratos"}
+        {etiquetaVolverContratos(volverA)}
       </Link>
 
       <div>

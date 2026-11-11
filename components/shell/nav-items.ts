@@ -10,6 +10,7 @@ import {
   FileSignature,
   FileSpreadsheet,
   FileText,
+  Flag,
   FolderKanban,
   FolderTree,
   Gauge,
@@ -91,9 +92,15 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Contratación",
     items: [
       {
-        title: "Contratos",
+        title: "Contratos nacionales",
         href: "/contratos",
         icon: FileSignature,
+        roles: ROLES_CONTRATACION,
+      },
+      {
+        title: "Contratos internacionales",
+        href: "/contratos-internacionales",
+        icon: Globe,
         roles: ROLES_CONTRATACION,
       },
       {
@@ -184,6 +191,12 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Aseguradores",
         href: "/configuracion/aseguradores",
         icon: ShieldCheck,
+        roles: ["superadmin"],
+      },
+      {
+        title: "Países",
+        href: "/configuracion/paises",
+        icon: Flag,
         roles: ["superadmin"],
       },
       {

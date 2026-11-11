@@ -8,6 +8,16 @@ const textoOpcional = z.preprocess(
   z.string().trim().max(300).nullable()
 )
 
+const textoLargoOpcional = z.preprocess(
+  (value) =>
+    value === "" || value === null || value === undefined ? null : value,
+  z
+    .string()
+    .trim()
+    .max(10_000, "Las observaciones son demasiado largas")
+    .nullable()
+)
+
 const numeroOpcional = z.preprocess(
   (value) =>
     value === "" || value === null || value === undefined ? null : Number(value),
@@ -105,7 +115,7 @@ export const sedeSchema = z.object({
   capacidad_inicial: enteroOpcional,
   capacidad_usuarios: enteroOpcional,
   numero_pisos: pisosOpcional,
-  observaciones: textoOpcional,
+  observaciones: textoLargoOpcional,
   areas: z.array(areaSedeSchema).default([]),
   aseguradores: z.array(z.string().uuid()).default([]),
 })

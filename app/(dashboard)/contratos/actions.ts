@@ -22,6 +22,7 @@ export type DuplicarContratoResult =
   | { error: string }
 
 const CONTRATOS_PATH = "/contratos"
+const CONTRATOS_INTERNACIONALES_PATH = "/contratos-internacionales"
 const HISTORIAL_PATH = "/historial"
 const UNIQUE_VIOLATION = "23505"
 const FOREIGN_KEY_VIOLATION = "23503"
@@ -193,7 +194,13 @@ async function validarReferencias(
     id: string
     dominio: string
     etiqueta: string
-  }[] = []
+  }[] = [
+    {
+      id: datos.pais_id,
+      dominio: "pais",
+      etiqueta: "país",
+    },
+  ]
 
   if (datos.categoria_contrato_id) {
     opcionesEsperadas.push({
@@ -302,6 +309,7 @@ function prepararContrato(
     nombre: input.nombre,
     asegurador_id: input.asegurador_id,
     numero_contrato: input.numero_contrato,
+    pais_id: input.pais_id,
     regional_id: regionalPrincipalId,
     ciudad: input.ciudad,
     modalidad: input.modalidad,
@@ -446,6 +454,7 @@ export async function crearContrato(
   }
 
   revalidatePath(CONTRATOS_PATH, "layout")
+  revalidatePath(CONTRATOS_INTERNACIONALES_PATH, "layout")
   revalidatePath(HISTORIAL_PATH, "layout")
   return { success: true }
 }
@@ -541,6 +550,7 @@ export async function actualizarContrato(
   if (error) return { error: mensajeError(error) }
 
   revalidatePath(CONTRATOS_PATH, "layout")
+  revalidatePath(CONTRATOS_INTERNACIONALES_PATH, "layout")
   revalidatePath(HISTORIAL_PATH, "layout")
   return { success: true }
 }
@@ -582,6 +592,7 @@ export async function duplicarContrato(
   if (error) return { error: mensajeError(error) }
 
   revalidatePath(CONTRATOS_PATH, "layout")
+  revalidatePath(CONTRATOS_INTERNACIONALES_PATH, "layout")
   revalidatePath(HISTORIAL_PATH, "layout")
   return { success: true, id: data as string }
 }
@@ -623,6 +634,7 @@ export async function eliminarContrato(
   if (error) return { error: mensajeError(error) }
 
   revalidatePath(CONTRATOS_PATH, "layout")
+  revalidatePath(CONTRATOS_INTERNACIONALES_PATH, "layout")
   revalidatePath(HISTORIAL_PATH, "layout")
   return { success: true }
 }

@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export const metadata: Metadata = {
-  title: "Contratos",
+  title: "Contratos nacionales",
 }
 
 function TablaSkeleton() {
@@ -26,22 +26,28 @@ export default function ContratosPage({
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-semibold">Contratos</h1>
+          <h1 className="font-heading text-2xl font-semibold">
+            Contratos nacionales
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Contratos en ejecución asociados a aseguradores y regionales.
+            Contratos en ejecución de Colombia, asociados a aseguradores y
+            regionales.
           </p>
         </div>
 
         <SoloEscritura>
           <Link href="/contratos/nuevo" className={cn(buttonVariants())}>
             <PlusIcon />
-            Nuevo contrato
+            Nuevo contrato nacional
           </Link>
         </SoloEscritura>
       </div>
 
       <Suspense fallback={<TablaSkeleton />}>
-        <ContratosContenido searchParams={searchParams} />
+        <ContratosContenido
+          searchParams={searchParams}
+          ambito="nacional"
+        />
       </Suspense>
     </div>
   )

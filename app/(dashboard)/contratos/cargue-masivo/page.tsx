@@ -21,12 +21,13 @@ export default async function CargueMasivoPage() {
         )}
       >
         <ArrowLeftIcon />
-        Volver a contratos
+        Volver a contratos nacionales
       </Link>
       <div>
         <h1 className="font-heading text-2xl font-semibold">Cargue masivo</h1>
         <p className="text-sm text-muted-foreground">
-          Descarga la plantilla, completa los datos y súbela para crear contratos en bloque.
+          Descarga la plantilla, completa los datos y súbela para crear
+          contratos nacionales (Colombia) en bloque.
         </p>
       </div>
       <CargueMasivoContenido />

@@ -61,10 +61,12 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import {
   calcularContrato,
+  esPaisNacional,
   esRegionalNacional,
   formatearMoneda,
   MODALIDADES,
   PERIODICIDADES,
+  type AmbitoContratos,
   type Modalidad,
   type Periodicidad,
 } from "@/lib/contratos/constantes"
@@ -84,6 +86,7 @@ type ContratoFormProps = {
   mode: "crear" | "editar" | "ver" | "crear_documento"
   contrato?: ContratoDetalle
   opciones: OpcionesContrato
+  ambito?: AmbitoContratos
   volverA?: string
   contratoId?: string
 }
@@ -374,6 +377,7 @@ export function ContratoForm({
   mode,
   contrato,
   opciones,
+  ambito = "nacional",
   volverA = "/contratos",
   contratoId,
 }: ContratoFormProps) {
@@ -435,9 +439,31 @@ export function ContratoForm({
         ? [opciones.regionales[0].id]
         : [])
 
+  const paisNacionalId =
+    (opciones.paises ?? []).find((pais) => esPaisNacional(pais.nombre))?.id ?? ""
+
+  // Al editar se ofrecen todos los países; al crear se limita el listado al
+  // ámbito del módulo desde el que se abrió el formulario.
+  const paisesDisponibles = contrato
+    ? opciones.paises ?? []
+    : ambito === "internacional"
+      ? (opciones.paises ?? []).filter((pais) => !esPaisNacional(pais.nombre))
+      : (opciones.paises ?? []).filter((pais) => esPaisNacional(pais.nombre))
+
+  const paisesItems = opcionesItems(
+    paisesDisponibles.map((pais) => ({
+      id: pais.id,
+      label: pais.nombre,
+    }))
+  )
+
+  const paisInicial =
+    contrato?.pais_id ?? (ambito === "internacional" ? "" : paisNacionalId)
+
   const valoresIniciales: ContratoInput = {
     nombre: contrato?.nombre ?? "",
     asegurador_id: contrato?.asegurador_id ?? "",
+    pais_id: paisInicial,
     numero_contrato: contrato?.numero_contrato ?? "",
     regional_ids: regionalesIniciales,
     ciudad: contrato?.ciudad ?? "",
@@ -709,6 +735,40 @@ export function ContratoForm({
                   {...register("numero_contrato")}
                 />
                 <FieldError errors={[errors.numero_contrato]} />
+              </Field>
+
+              <Field data-invalid={!!errors.pais_id}>
+                <FieldLabel>País</FieldLabel>
+                <Controller
+                  control={control}
+                  name="pais_id"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      items={paisesItems}
+                      disabled={
+                        readonly || paisesDisponibles.length === 0
+                      }
+                    >
+                      <SelectTrigger
+                        id="pais_id"
+                        className="w-full"
+                        aria-invalid={!!errors.pais_id}
+                      >
+                        <SelectValue placeholder="Selecciona el país" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paisesDisponibles.map((pais) => (
+                          <SelectItem key={pais.id} value={pais.id}>
+                            {pais.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldError errors={[errors.pais_id]} />
               </Field>
 
               <Field data-invalid={!!errors.asegurador_id}>

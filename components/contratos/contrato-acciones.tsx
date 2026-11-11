@@ -38,7 +38,7 @@ export function ContratoAcciones({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const query =
-    volverA === "/historial"
+    volverA && volverA !== "/contratos"
       ? `?volver=${encodeURIComponent(volverA)}`
       : ""
 

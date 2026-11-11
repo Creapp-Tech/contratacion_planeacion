@@ -20,8 +20,10 @@ import { cn } from "cn"
 
 export async function ContratoDetalleContenido({
   params,
+  volverA,
 }: {
   params: Promise<{ id: string }>
+  volverA?: string
 }) {
   const usuario = await requireAccesoContratacion()
   const alcance = alcanceContratos(usuario)
@@ -40,7 +42,12 @@ export async function ContratoDetalleContenido({
   return (
     <div className="flex flex-col gap-6">
       {/* Datos del contrato (vigente) */}
-      <ContratoForm mode="ver" contrato={contrato} opciones={opciones} />
+      <ContratoForm
+        mode="ver"
+        contrato={contrato}
+        opciones={opciones}
+        volverA={volverA}
+      />
 
       {/* Pestaña / Sección Historial */}
       <div className="rounded-xl border bg-card shadow-sm">

@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
     ["- Regionales: usa la pestaña 'Regionales'. Puedes indicar varias separadas por ';'. 'Nacional' es excluyente."],
     ["- Obligatorios marcados con *. Fechas: dd/mm/aaaa. Booleanos: Sí / No."],
     ["- Sedes y valores: usa las pestañas 'Contrato_Sedes' y 'Contrato_Valores' ligadas por numero_contrato."],
+    ["- El país de los contratos cargados será Colombia (contratos nacionales)."],
     ["- Las pestañas de listas (Aseguradores, Regionales, etc.) son de solo lectura."],
     ["- Guarda el archivo como .xlsx antes de subirlo."],
   ]

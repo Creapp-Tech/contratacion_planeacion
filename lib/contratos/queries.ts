@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { ESTADO_EJECUCION_EN_EJECUCION } from "@/lib/contratos/constantes"
+import {
+  ESTADO_EJECUCION_EN_EJECUCION,
+  PAIS_NACIONAL,
+  type AmbitoContratos,
+} from "@/lib/contratos/constantes"
 
 const CAMPOS_CONTRATO = `
   id,
@@ -9,6 +13,7 @@ const CAMPOS_CONTRATO = `
   modalidad,
   estado,
   asegurador_id,
+  pais_id,
   regional_id,
   responsable_id,
   categoria_contrato_id,
@@ -27,6 +32,7 @@ const CAMPOS_CONTRATO = `
   notas,
   created_at,
   aseguradores_eps(nombre_eps),
+  pais:catalogos_opciones!contratos_pais_id_fkey(nombre),
   regionales:contrato_regionales(regional_id, regionales(id, nombre)),
   sedes_count:contratos_sedes(count),
   categoria_contrato:catalogos_opciones!contratos_categoria_contrato_id_fkey(nombre),
@@ -74,6 +80,7 @@ export type ContratoRow = {
   modalidad: string
   estado: string
   asegurador_id: string
+  pais_id: string
   regional_id: string
   responsable_id: string | null
   categoria_contrato_id: string | null
@@ -92,6 +99,7 @@ export type ContratoRow = {
   notas: string | null
   created_at: string
   aseguradores_eps: { nombre_eps: string } | null
+  pais: { nombre: string } | null
   regionales: ContratoRegional[]
   sedes_count: number
   responsable: { nombre: string } | null
@@ -134,6 +142,8 @@ export type ContratoDetalle = ContratoRow & {
 
 export type ContratoFiltros = {
   q?: string
+  ambito?: AmbitoContratos
+  pais?: string[]
   asegurador?: string[]
   regional?: string[]
   estadoLegalizacion?: string[]
@@ -199,6 +209,7 @@ export type ContratoDocumentoRow = {
 
 export type OpcionesContrato = {
   aseguradores: AseguradorOpcion[]
+  paises: CatalogoOpcion[]
   regionales: RegionalOpcion[]
   responsables: ResponsableOpcion[]
   categorias: CatalogoOpcion[]
@@ -249,6 +260,7 @@ export async function getContrato(
 
 export const OPCIONES_CONTRATO_VACIAS: OpcionesContrato = {
   aseguradores: [],
+  paises: [],
   regionales: [],
   responsables: [],
   categorias: [],
@@ -342,6 +354,18 @@ async function obtenerEstadoEnEjecucionId(): Promise<string> {
   return (data as { id: string }).id
 }
 
+async function obtenerPaisNacionalId(): Promise<string | null> {
+  const { data, error } = await createAdminClient()
+    .from("catalogos_opciones")
+    .select("id")
+    .eq("dominio", "pais")
+    .eq("nombre", PAIS_NACIONAL)
+    .maybeSingle()
+
+  if (error) throw error
+  return (data as { id: string } | null)?.id ?? null
+}
+
 export async function listContratos(
   filtros: ContratoFiltros,
   alcance: AlcanceContratosQuery
@@ -362,6 +386,24 @@ export async function listContratos(
     )
   } else {
     query = query.eq("estado_ejecucion_id", estadoEnEjecucionId)
+  }
+
+  if (filtros.ambito) {
+    const paisNacionalId = await obtenerPaisNacionalId()
+
+    if (filtros.ambito === "nacional") {
+      if (!paisNacionalId) return []
+      query = query.eq("pais_id", paisNacionalId)
+    } else {
+      if (paisNacionalId) {
+        query = query.neq("pais_id", paisNacionalId)
+      }
+
+      const paisesSeleccionados = (filtros.pais ?? []).filter(esUuid)
+      if (paisesSeleccionados.length > 0) {
+        query = query.in("pais_id", paisesSeleccionados)
+      }
+    }
   }
 
   if (!alcance.verTodo) {
@@ -424,6 +466,7 @@ export async function listOpcionesContrato(
 
   const [
     aseguradoresResult,
+    paisesResult,
     regionalesResult,
     responsablesResult,
     categorias,
@@ -439,6 +482,12 @@ export async function listOpcionesContrato(
       .select("id, nombre_eps")
       .eq("estado", "activo")
       .order("nombre_eps", { ascending: true }),
+    admin
+      .from("catalogos_opciones")
+      .select("id, nombre")
+      .eq("dominio", "pais")
+      .eq("activo", true)
+      .order("nombre", { ascending: true }),
     admin
       .from("regionales")
       .select("id, nombre")
@@ -491,6 +540,7 @@ export async function listOpcionesContrato(
   ])
 
   if (aseguradoresResult.error) throw aseguradoresResult.error
+  if (paisesResult.error) throw paisesResult.error
   if (regionalesResult.error) throw regionalesResult.error
   if (responsablesResult.error) throw responsablesResult.error
   if (categorias.error) throw categorias.error
@@ -502,6 +552,7 @@ export async function listOpcionesContrato(
   if (sedesResult.error) throw sedesResult.error
 
   const aseguradores = (aseguradoresResult.data ?? []) as AseguradorOpcion[]
+  const paisesData = (paisesResult.data ?? []) as CatalogoOpcion[]
   const regionalesTodas = (regionalesResult.data ??
     []) as RegionalOpcion[]
   const responsables = (responsablesResult.data ?? []) as ResponsableOpcion[]
@@ -536,7 +587,7 @@ export async function listOpcionesContrato(
 
   if (!alcance.verTodo) {
     if (!alcance.regionalId) {
-      return { ...OPCIONES_CONTRATO_VACIAS, aseguradores }
+      return { ...OPCIONES_CONTRATO_VACIAS, aseguradores, paises: paisesData }
     }
 
     regionales = regionales.filter(
@@ -553,6 +604,7 @@ export async function listOpcionesContrato(
 
   return {
     aseguradores,
+    paises: paisesData,
     regionales,
     responsables,
     categorias: categoriasData,

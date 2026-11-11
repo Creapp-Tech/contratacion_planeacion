@@ -9,6 +9,7 @@ import { CheckIcon, ChevronDownIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { esPaisNacional } from "@/lib/contratos/constantes"
 import type { ContratoFiltros, OpcionesContrato } from "@/lib/contratos/queries"
 
 const TODOS = "__todos__"
@@ -176,10 +177,12 @@ export function ContratoFiltros({
   opciones,
   filtros,
   verRegional,
+  verPais = false,
 }: {
   opciones: OpcionesContrato
   filtros: ContratoFiltros
   verRegional: boolean
+  verPais?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -192,6 +195,9 @@ export function ContratoFiltros({
   )
   const [regionalSeleccionada, setRegionalSeleccionada] = useState(
     filtros.regional ?? []
+  )
+  const [paisSeleccionado, setPaisSeleccionado] = useState(
+    filtros.pais ?? []
   )
   const [estadoLegalizacionSeleccionado, setEstadoLegalizacionSeleccionado] =
     useState(filtros.estadoLegalizacion ?? [])
@@ -237,6 +243,27 @@ export function ContratoFiltros({
   ]
 
   const regionalIds = opciones.regionales.map((r) => r.id)
+
+  const paisesDisponibles = (opciones.paises ?? []).filter(
+    (pais) => !esPaisNacional(pais.nombre)
+  )
+
+  const paisItems = Object.fromEntries([
+    [TODOS, "Seleccionar todos"],
+    [NINGUNO, "Desmarcar todos"],
+    ...paisesDisponibles.map((pais) => [pais.id, pais.nombre]),
+  ])
+
+  const paisOptions = [
+    { value: TODOS, label: "Seleccionar todos" },
+    { value: NINGUNO, label: "Desmarcar todos" },
+    ...paisesDisponibles.map((pais) => ({
+      value: pais.id,
+      label: pais.nombre,
+    })),
+  ]
+
+  const paisIds = paisesDisponibles.map((pais) => pais.id)
 
   const estadoLegalizacionItems = Object.fromEntries([
     [TODOS, "Seleccionar todos"],
@@ -296,10 +323,19 @@ export function ContratoFiltros({
     })
   }
 
+  function onChangePais(siguiente: string[]) {
+    setPaisSeleccionado(siguiente)
+    const reales = idsReales(siguiente)
+    updateParams({
+      pais: reales.length > 0 ? reales : undefined,
+    })
+  }
+
   const hasFiltros = Boolean(
     filtros.q ||
       (filtros.asegurador?.length ?? 0) > 0 ||
       (filtros.regional?.length ?? 0) > 0 ||
+      (filtros.pais?.length ?? 0) > 0 ||
       (filtros.estadoLegalizacion?.length ?? 0) > 0
   )
 
@@ -352,6 +388,21 @@ export function ContratoFiltros({
         </div>
       ) : null}
 
+      {verPais ? (
+        <div className="w-full min-w-0 sm:min-w-40 sm:flex-1 lg:min-w-0">
+          <FiltroSelectMulti
+            id="filtro-pais"
+            value={paisSeleccionado}
+            placeholder="País"
+            items={paisItems}
+            options={paisOptions}
+            onChange={onChangePais}
+            todosLosIds={paisIds}
+            etiquetaTodos="Todos los países"
+          />
+        </div>
+      ) : null}
+
       <div className="w-full min-w-0 sm:min-w-40 sm:flex-1 lg:min-w-0">
         <FiltroSelectMulti
           id="filtro-legalizacion"
@@ -373,6 +424,7 @@ export function ContratoFiltros({
             setQ("")
             setAseguradorSeleccionado([])
             setRegionalSeleccionada([])
+            setPaisSeleccionado([])
             setEstadoLegalizacionSeleccionado([])
             startTransition(() => router.replace(pathname))
           }}

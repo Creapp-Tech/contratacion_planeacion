@@ -3,11 +3,19 @@ import {
   alcanceContratos,
   requireAccesoContratacion,
 } from "@/lib/auth/session"
+import {
+  RUTAS_CONTRATOS,
+  type AmbitoContratos,
+} from "@/lib/contratos/constantes"
 import { listOpcionesContrato } from "@/lib/contratos/queries"
 
 import { ContratoForm } from "./contrato-form"
 
-export async function ContratoNuevoContenido() {
+export async function ContratoNuevoContenido({
+  ambito = "nacional",
+}: {
+  ambito?: AmbitoContratos
+} = {}) {
   const usuario = await requireAccesoContratacion()
   const alcance = alcanceContratos(usuario)
 
@@ -24,5 +32,12 @@ export async function ContratoNuevoContenido() {
 
   const opciones = await listOpcionesContrato(alcance)
 
-  return <ContratoForm mode="crear" opciones={opciones} />
+  return (
+    <ContratoForm
+      mode="crear"
+      opciones={opciones}
+      ambito={ambito}
+      volverA={RUTAS_CONTRATOS[ambito]}
+    />
+  )
 }

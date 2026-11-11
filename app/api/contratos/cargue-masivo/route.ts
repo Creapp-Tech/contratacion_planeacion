@@ -112,6 +112,24 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = createAdminClient()
+
+    // El cargue masivo no recibe país: todos los contratos entran como Colombia.
+    const { data: paisColombia, error: errorPais } = await admin
+      .from("catalogos_opciones")
+      .select("id")
+      .eq("dominio", "pais")
+      .eq("nombre", "Colombia")
+      .maybeSingle()
+
+    if (errorPais || !paisColombia) {
+      return NextResponse.json(
+        { error: "No se encontró el país Colombia en el catálogo" },
+        { status: 500 }
+      )
+    }
+
+    const paisColombiaId = (paisColombia as { id: string }).id
+
     const resultados = {
       creados: 0,
       rechazados: 0,
@@ -141,6 +159,7 @@ export async function POST(req: NextRequest) {
       const inputZod: any = {
         nombre: String(raw.nombre || "").trim(),
         asegurador_id: String(raw.asegurador_id || "").trim(),
+        pais_id: paisColombiaId,
         numero_contrato: numContrato,
         regional_ids: raw.regional_ids_str
           ? String(raw.regional_ids_str)
@@ -319,6 +338,7 @@ export async function POST(req: NextRequest) {
         nombre: datos.nombre,
         asegurador_id: datos.asegurador_id,
         numero_contrato: datos.numero_contrato,
+        pais_id: datos.pais_id,
         regional_id: regionalPrincipalId,
         ciudad: datos.ciudad,
         modalidad: datos.modalidad,
