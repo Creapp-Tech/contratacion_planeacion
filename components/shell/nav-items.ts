@@ -104,6 +104,12 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ROLES_CONTRATACION,
       },
       {
+        title: "Dashboard de contratos",
+        href: "/contratos/dashboard",
+        icon: BarChart3,
+        roles: ROLES_CONTRATACION,
+      },
+      {
         title: "Historial",
         href: "/historial",
         icon: History,

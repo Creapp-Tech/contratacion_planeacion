@@ -25,7 +25,10 @@ import {
 import { getNavGroups, type NavGroup } from "./nav-items";
 
 function isActivePath(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  // Use exact match only to avoid prefix matching that incorrectly marks
+  // sibling routes as active (e.g., /contratos/dashboard highlighting "Contratos nacionales").
+  // A trailing-slash match is also accepted for routes that may render with one.
+  return pathname === href || pathname === `${href}/`
 }
 
 export function AppSidebar({ rol }: { rol: string | null }) {
