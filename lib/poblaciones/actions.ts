@@ -9,7 +9,9 @@ import {
 import { alcanceTotal } from "@/lib/constants/roles"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
+  poblacionInlineSchema,
   poblacionSchema,
+  type PoblacionInlineInput,
   type PoblacionInput,
 } from "@/lib/validations/poblacion"
 
@@ -46,6 +48,15 @@ async function regionalDeSede(
 function revalidar() {
   revalidatePath(POBLACIONES_PATH)
   revalidatePath(MAPA_PATH)
+}
+
+/** Fecha civil del servidor en formato `YYYY-MM-DD` (columna `date`). */
+function fechaHoy() {
+  const ahora = new Date()
+  const anio = ahora.getFullYear()
+  const mes = String(ahora.getMonth() + 1).padStart(2, "0")
+  const dia = String(ahora.getDate()).padStart(2, "0")
+  return `${anio}-${mes}-${dia}`
 }
 
 export async function crearPoblacion(
@@ -124,6 +135,60 @@ export async function actualizarPoblacion(
   const { error } = await admin
     .from("poblacion_aseguradora")
     .update({ ...parsed.data, usuario_id: usuario.id })
+    .eq("id", id)
+
+  if (error) return { error: mensajeError(error) }
+
+  revalidar()
+  return { success: true }
+}
+
+/**
+ * Actualiza únicamente los tres campos poblacionales editables en la tabla.
+ * La fecha de actualización la fija el servidor; el cliente nunca la envía.
+ */
+export async function actualizarPoblacionInline(
+  id: string,
+  input: PoblacionInlineInput
+): Promise<PoblacionActionResult> {
+  const usuario = await usuarioEditor()
+  if (!usuario) {
+    return { error: "No tienes permiso para realizar esta acción" }
+  }
+
+  const parsed = poblacionInlineSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" }
+  }
+
+  const admin = createAdminClient()
+
+  const { data: actual, error: errorActual } = await admin
+    .from("poblacion_aseguradora")
+    .select("sede_id")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (errorActual) return { error: errorActual.message }
+  if (!actual) return { error: "La población no existe" }
+
+  if (!alcanceTotal(usuario.rol)) {
+    const regional = await regionalDeSede(
+      admin,
+      (actual as { sede_id: string }).sede_id
+    )
+    if (!(await puedeGestionarRegional(usuario, regional))) {
+      return { error: "Solo puedes gestionar poblaciones de tu regional" }
+    }
+  }
+
+  const { error } = await admin
+    .from("poblacion_aseguradora")
+    .update({
+      ...parsed.data,
+      fecha_actualizacion: fechaHoy(),
+      usuario_id: usuario.id,
+    })
     .eq("id", id)
 
   if (error) return { error: mensajeError(error) }

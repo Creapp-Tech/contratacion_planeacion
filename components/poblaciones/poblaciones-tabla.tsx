@@ -1,7 +1,6 @@
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -12,7 +11,7 @@ import {
   type PoblacionFila,
 } from "@/lib/poblaciones/queries"
 
-import { PoblacionAcciones } from "./poblacion-acciones"
+import { PoblacionFila as PoblacionFilaComponent } from "./poblacion-fila"
 
 function Kpi({
   titulo,
@@ -26,15 +25,6 @@ function Kpi({
       <span className="text-sm text-muted-foreground">{titulo}</span>
       <span className="text-2xl font-semibold tabular-nums">{valor}</span>
     </div>
-  )
-}
-
-function formatearFecha(fecha: string | null) {
-  if (!fecha) return "—"
-  const partes = fecha.split("-")
-  if (partes.length !== 3) return fecha
-  return new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" }).format(
-    new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]))
   )
 }
 
@@ -84,38 +74,11 @@ export function PoblacionesTabla({
             </TableHeader>
             <TableBody>
               {filas.map((fila) => (
-                <TableRow key={fila.id}>
-                  <TableCell className="font-medium">
-                    {fila.sedes?.nombre ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {fila.aseguradores_eps?.nombre_eps ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {fila.regimenes?.nombre ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatoNumero(fila.poblacion_activa)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatoNumero(fila.poblacion_pagada)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatoNumero(fila.poblacion_certificada)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatearFecha(fila.fecha_actualizacion)}
-                  </TableCell>
-                  <TableCell>
-                    <PoblacionAcciones
-                      id={fila.id}
-                      nombre={`${fila.sedes?.nombre ?? "Sede"} · ${
-                        fila.aseguradores_eps?.nombre_eps ?? "Asegurador"
-                      } · ${fila.regimenes?.nombre ?? "Régimen"}`}
-                      puedeEditar={puedeEditar}
-                    />
-                  </TableCell>
-                </TableRow>
+                <PoblacionFilaComponent
+                  key={fila.id}
+                  fila={fila}
+                  puedeEditar={puedeEditar}
+                />
               ))}
             </TableBody>
           </Table>

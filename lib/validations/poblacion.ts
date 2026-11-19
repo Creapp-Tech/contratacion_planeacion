@@ -19,3 +19,12 @@ export const poblacionSchema = z.object({
 })
 
 export type PoblacionInput = z.infer<typeof poblacionSchema>
+
+/** Solo los campos editables en línea desde la tabla de población. */
+export const poblacionInlineSchema = z.object({
+  poblacion_activa: poblacionEntera("la población activa"),
+  poblacion_pagada: poblacionEntera("la población pagada"),
+  poblacion_certificada: poblacionEntera("la población certificada"),
+})
+
+export type PoblacionInlineInput = z.infer<typeof poblacionInlineSchema>

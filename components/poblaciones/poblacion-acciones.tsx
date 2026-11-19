@@ -23,12 +23,14 @@ type PoblacionAccionesProps = {
   id: string
   nombre: string
   puedeEditar: boolean
+  onEditar: () => void
 }
 
 export function PoblacionAcciones({
   id,
   nombre,
   puedeEditar,
+  onEditar,
 }: PoblacionAccionesProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -60,15 +62,15 @@ export function PoblacionAcciones({
 
       {puedeEditar ? (
         <>
-          <Link
-            href={`/poblaciones/${id}/editar`}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={`Editar ${nombre}`}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon-sm" })
-            )}
+            onClick={onEditar}
           >
             <PencilIcon />
-          </Link>
+          </Button>
           <Button
             type="button"
             variant="ghost"
