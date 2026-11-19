@@ -23,6 +23,7 @@ function TarjetaResumen({
   titulo,
   detalle,
   valor,
+  prorroga,
   icono,
   activa = false,
   onClick,
@@ -30,6 +31,7 @@ function TarjetaResumen({
   titulo: string
   detalle: string
   valor: number
+  prorroga?: number
   icono: ReactNode
   activa?: boolean
   onClick?: () => void
@@ -45,6 +47,11 @@ function TarjetaResumen({
       <span className="text-2xl font-semibold tabular-nums text-foreground">
         {valor}
       </span>
+      {prorroga !== undefined && (
+        <span className="text-xs text-muted-foreground">
+          Con prorroga automática: {prorroga}
+        </span>
+      )}
       <span className="text-xs text-muted-foreground">{detalle}</span>
     </>
   )
@@ -101,6 +108,28 @@ export function ResumenContratos({
     (contrato) => calcularVigencia(contrato.fecha_fin).estado === "vencido"
   ).length
 
+  const totalContratosConProrroga = contratos.filter(
+    (contrato) => contrato.prorroga_automatica
+  ).length
+
+  const vigentesConProrroga = contratos.filter(
+    (contrato) =>
+      calcularVigencia(contrato.fecha_fin).estado === "vigente" &&
+      contrato.prorroga_automatica
+  ).length
+
+  const proximosAVencerConProrroga = contratos.filter(
+    (contrato) =>
+      calcularVigencia(contrato.fecha_fin).estado === "proximo_vencer" &&
+      contrato.prorroga_automatica
+  ).length
+
+  const vencidosConProrroga = contratos.filter(
+    (contrato) =>
+      calcularVigencia(contrato.fecha_fin).estado === "vencido" &&
+      contrato.prorroga_automatica
+  ).length
+
   function aplicarFiltro(filtro: FiltroVigencia) {
     // Al hacer clic en el filtro ya activo se vuelve a "todos".
     const destino: FiltroVigencia =
@@ -129,6 +158,7 @@ export function ResumenContratos({
         titulo="Contratos"
         detalle="En el listado actual"
         valor={totalContratos}
+        prorroga={totalContratosConProrroga}
         icono={<FileTextIcon className="size-5 text-muted-foreground" />}
         activa={vigencia === "todos"}
         onClick={() => aplicarFiltro("todos")}
@@ -137,6 +167,7 @@ export function ResumenContratos({
         titulo="Vigentes"
         detalle="Más de 75 días para vencer"
         valor={vigentes}
+        prorroga={vigentesConProrroga}
         icono={<CircleCheckIcon className="size-5 text-emerald-600" />}
         activa={vigencia === "vigente"}
         onClick={() => aplicarFiltro("vigente")}
@@ -145,6 +176,7 @@ export function ResumenContratos({
         titulo="Próximo a vencer"
         detalle="75 días o menos"
         valor={proximosAVencer}
+        prorroga={proximosAVencerConProrroga}
         icono={<TriangleAlertIcon className="size-5 text-amber-600" />}
         activa={vigencia === "proximo_vencer"}
         onClick={() => aplicarFiltro("proximo_vencer")}
@@ -153,6 +185,7 @@ export function ResumenContratos({
         titulo="Vencidos"
         detalle="Fecha de fin superada"
         valor={vencidos}
+        prorroga={vencidosConProrroga}
         icono={<CircleXIcon className="size-5 text-red-600" />}
         activa={vigencia === "vencido"}
         onClick={() => aplicarFiltro("vencido")}
