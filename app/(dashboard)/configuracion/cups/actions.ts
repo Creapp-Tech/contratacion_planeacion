@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache"
 import { requireSuperadmin } from "@/lib/auth/session"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { listOpcionesCups } from "@/lib/cups/queries"
-import { cupsSchema, type CupsInput, type CupsOutput } from "@/lib/validations/cups"
+import {
+  cupsInlineSchema,
+  cupsSchema,
+  type CupsInlineInput,
+  type CupsInput,
+  type CupsOutput,
+} from "@/lib/validations/cups"
 
 export type CupsActionResult = { success: true } | { error: string }
 
@@ -87,6 +93,67 @@ export async function actualizarCups(id: string, input: CupsInput): Promise<Cups
   return { success: true }
 }
 
+export async function actualizarCupsInline(
+  id: string,
+  input: CupsInlineInput
+): Promise<CupsActionResult> {
+  await requireSuperadmin()
+
+  const parsed = cupsInlineSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" }
+  }
+
+  const { grupo_id, servicio_id } = parsed.data
+
+  const { data: cupActual, error: errorCup } = await createAdminClient()
+    .from("cups")
+    .select("grupo_id, servicio_id")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (errorCup) return { error: errorCup.message }
+  if (!cupActual) return { error: "No se encontró el CUPS." }
+
+  // Hay registros importados con grupo y servicio incoherentes. No hay que
+  // bloquear un guardado que no cambia ninguno de los dos campos.
+  if (
+    cupActual.grupo_id === grupo_id &&
+    cupActual.servicio_id === servicio_id
+  ) {
+    return { success: true }
+  }
+
+  if (servicio_id) {
+    const { data: servicio, error: errorServicio } = await createAdminClient()
+      .from("servicios")
+      .select("grupo_id")
+      .eq("id", servicio_id)
+      .maybeSingle()
+
+    if (errorServicio) return { error: errorServicio.message }
+    if (!servicio) return { error: "El servicio seleccionado no existe." }
+    if (!grupo_id) return { error: "Selecciona el grupo de servicio." }
+    if (servicio.grupo_id !== grupo_id) {
+      return { error: "El servicio no pertenece al grupo seleccionado." }
+    }
+  }
+
+  const { error } = await createAdminClient()
+    .from("cups")
+    .update({
+      grupo_id,
+      servicio_id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(CUPS_PATH)
+  return { success: true }
+}
+
 export async function eliminarCups(id: string): Promise<CupsActionResult> {
   await requireSuperadmin()
 
@@ -113,21 +180,39 @@ export async function importarCups(
   const payload: RegistroCups[] = []
   const actualizaciones: ActualizacionCups[] = []
 
-  // Cargar existentes para detectar duplicados por código + versión
-  const existentesRes = await createAdminClient()
-    .from("cups")
-    .select("id, codigo, version_resolucion")
+  // Cargar existentes para detectar duplicados por código + versión.
+  // PostgREST devuelve máximo 1000 filas por petición, así que se pagina.
+  const mapaExistentes = new Map<string, string>()
+  const admin = createAdminClient()
+  const tamanoBloque = 1000
+  let desde = 0
 
-  if (existentesRes.error) {
-    return { error: "No se pudo cargar los CUPS existentes." }
+  while (true) {
+    const { data, error } = await admin
+      .from("cups")
+      .select("id, codigo, version_resolucion")
+      .range(desde, desde + tamanoBloque - 1)
+
+    if (error) {
+      return { error: "No se pudo cargar los CUPS existentes." }
+    }
+
+    const existentes = (data ?? []) as {
+      id: string
+      codigo: string | null
+      version_resolucion: string | null
+    }[]
+
+    for (const c of existentes) {
+      mapaExistentes.set(
+        `${c.codigo?.trim().toLowerCase()}|${c.version_resolucion?.trim().toLowerCase()}`,
+        c.id
+      )
+    }
+
+    if (existentes.length < tamanoBloque) break
+    desde += tamanoBloque
   }
-
-  const mapaExistentes = new Map(
-    ((existentesRes.data ?? []) as { id: string; codigo: string | null; version_resolucion: string | null }[]).map((c) => [
-      `${c.codigo?.trim().toLowerCase()}|${c.version_resolucion?.trim().toLowerCase()}`,
-      c.id,
-    ])
-  )
 
   // Cargar grupos y servicios para validación
   const [gruposRes, serviciosRes] = await Promise.all([

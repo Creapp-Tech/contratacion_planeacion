@@ -22,6 +22,7 @@ import {
   Map,
   MapPin,
   MapPinned,
+  Network,
   ShieldCheck,
   Stethoscope,
   Tag,
@@ -33,6 +34,7 @@ import {
 
 import {
   ROLES_CONTRATACION,
+  ROLES_DIRECCIONAMIENTO,
   ROLES_PLANEACION,
   puedeVerTodoModulos,
   type Rol,
@@ -120,6 +122,17 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/ipc",
         icon: TrendingUp,
         roles: ROLES_CONTRATACION,
+      },
+    ],
+  },
+  {
+    label: "Direccionamiento",
+    items: [
+      {
+        title: "Especialistas y contratos",
+        href: "/direccionamiento",
+        icon: Network,
+        roles: ROLES_DIRECCIONAMIENTO,
       },
     ],
   },

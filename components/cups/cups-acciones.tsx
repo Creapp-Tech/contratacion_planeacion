@@ -3,7 +3,13 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { EyeIcon, Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react"
+import {
+  ExternalLinkIcon,
+  EyeIcon,
+  Loader2Icon,
+  PencilIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { eliminarCups } from "@/app/(dashboard)/configuracion/cups/actions"
 import { SoloEscritura } from "@/components/auth/permisos-provider"
@@ -24,14 +30,16 @@ type CupAccionesProps = {
   id: string
   nombre: string
   codigo: string
-  activo: boolean
+  onEditar: () => void
+  puedeEditar: boolean
 }
 
 export function CupAcciones({
   id,
   nombre,
   codigo,
-  activo,
+  onEditar,
+  puedeEditar,
 }: CupAccionesProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -60,14 +68,29 @@ export function CupAcciones({
       >
         <EyeIcon />
       </Link>
+      {puedeEditar ? (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Editar grupo y servicio de ${nombre}`}
+            onClick={onEditar}
+            title="Editar grupo y servicio en la fila"
+          >
+            <PencilIcon />
+          </Button>
+          <Link
+            href={`/configuracion/cups/${id}/editar`}
+            aria-label={`Editar todos los campos de ${nombre}`}
+            title="Editar todos los campos"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+          >
+            <ExternalLinkIcon />
+          </Link>
+        </>
+      ) : null}
       <SoloEscritura>
-        <Link
-          href={`/configuracion/cups/${id}/editar`}
-          aria-label={`Editar ${nombre}`}
-          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-        >
-          <PencilIcon />
-        </Link>
         <Button
           type="button"
           variant="ghost"

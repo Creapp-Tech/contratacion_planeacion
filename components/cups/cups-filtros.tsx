@@ -178,7 +178,10 @@ export function CupsFiltros({
         className="relative w-full sm:w-64 sm:flex-none"
         onSubmit={(event) => {
           event.preventDefault()
-          updateParams({ q: qState.trim() || undefined })
+          updateParams({
+            q: qState.trim() || undefined,
+            pagina: undefined,
+          })
         }}
       >
         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -200,7 +203,11 @@ export function CupsFiltros({
         )}
         options={grupoOptions}
         onChange={(value) =>
-          updateParams({ grupo: value, servicio: undefined })
+          updateParams({
+            grupo: value,
+            servicio: undefined,
+            pagina: undefined,
+          })
         }
       />
 
@@ -212,7 +219,9 @@ export function CupsFiltros({
           servicioOptions.map((option) => [option.value, option.label])
         )}
         options={servicioOptions}
-        onChange={(value) => updateParams({ servicio: value })}
+        onChange={(value) =>
+          updateParams({ servicio: value, pagina: undefined })
+        }
         disabled={!grupo_id}
       />
 
@@ -224,7 +233,9 @@ export function CupsFiltros({
           capituloOptions.map((option) => [option.value, option.label])
         )}
         options={capituloOptions}
-        onChange={(value) => updateParams({ capitulo: value })}
+        onChange={(value) =>
+          updateParams({ capitulo: value, pagina: undefined })
+        }
       />
 
       <FiltroSelect
@@ -235,7 +246,9 @@ export function CupsFiltros({
           seccionOptions.map((option) => [option.value, option.label])
         )}
         options={seccionOptions}
-        onChange={(value) => updateParams({ seccion: value })}
+        onChange={(value) =>
+          updateParams({ seccion: value, pagina: undefined })
+        }
       />
 
       {hasFiltros ? (

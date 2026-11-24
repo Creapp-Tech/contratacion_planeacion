@@ -43,47 +43,48 @@ export type CupsOpciones = {
   secciones: string[]
 }
 
+export type CupsListado = {
+  rows: CupsRow[]
+  total: number
+}
+
+export type CupsPaginacionParams = {
+  page: number
+  pageSize: number
+}
+
+export const CUP_PAGE_SIZES = [10, 25, 50, 100] as const
+
+export function normalizarPaginacion(
+  pagina: string | string[] | undefined,
+  porPagina: string | string[] | undefined
+): CupsPaginacionParams {
+  const page = typeof pagina === "string" ? Number(pagina) : NaN
+  const pageSize = typeof porPagina === "string" ? Number(porPagina) : NaN
+
+  return {
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+    pageSize: CUP_PAGE_SIZES.find((size) => size === pageSize) ?? 10,
+  }
+}
+
 const collator = new Intl.Collator("es", { numeric: true, sensitivity: "base" })
 
-function esCapitulo(nombre: string, descripcion: string | null) {
-  const valor = `${descripcion ?? ""} ${nombre}`.toLowerCase()
-  return valor.includes("capítulo") || valor.includes("capitulo")
-}
-
-function esAnexo(nombre: string, descripcion: string | null) {
-  const valor = `${descripcion ?? ""} ${nombre}`.toLowerCase()
-  return valor.includes("anexo")
-}
-
-function esSeccion(nombre: string, descripcion: string | null) {
-  const valor = `${descripcion ?? ""} ${nombre}`.toLowerCase()
-  return valor.includes("sección") || valor.includes("seccion")
-}
-
 export async function listOpcionesCups(): Promise<CupsOpciones> {
-  const { data, error } = await createAdminClient()
-    .from("catalogos_opciones")
-    .select("nombre, descripcion")
-    .eq("dominio", "cups")
-    .eq("activo", true)
+  const { data, error } = await createAdminClient().rpc("cups_opciones_filtro")
 
   if (error) throw error
 
-  const opciones = (data ?? []) as { nombre: string; descripcion: string | null }[]
+  const filas = (data ?? []) as CupsOpciones[]
 
-  const capitulos = opciones
-    .filter((opcion) =>
-      esCapitulo(opcion.nombre, opcion.descripcion) || esAnexo(opcion.nombre, opcion.descripcion)
-    )
-    .map((opcion) => opcion.nombre)
-    .sort((a, b) => collator.compare(a, b))
-
-  const secciones = opciones
-    .filter((opcion) => esSeccion(opcion.nombre, opcion.descripcion))
-    .map((opcion) => opcion.nombre)
-    .sort((a, b) => collator.compare(a, b))
-
-  return { capitulos, secciones }
+  return {
+    capitulos: [...(filas[0]?.capitulos ?? [])].sort((a, b) =>
+      collator.compare(a, b)
+    ),
+    secciones: [...(filas[0]?.secciones ?? [])].sort((a, b) =>
+      collator.compare(a, b)
+    ),
+  }
 }
 
 export type CupsFiltros = {
@@ -96,52 +97,78 @@ export type CupsFiltros = {
   activo?: boolean
 }
 
-export async function listCups(filtros: CupsFiltros = {}): Promise<CupsRow[]> {
-  let query = createAdminClient()
-    .from("cups")
-    .select(`
-      *,
-      grupos_servicio(nombre),
-      servicios(nombre, grupo_id)
-    `)
-    .order("codigo", { ascending: true })
+// PostgREST usa \, (, ), ', % y _ como caracteres especiales en los filtros.
+function escaparValorLike(valor: string) {
+  return valor.replace(/[\\%,()'._]/g, "\\$&")
+}
 
-  if (filtros.q) {
-    const q = filtros.q.replace(/[,()]/g, " ").trim()
-    query = query.or(
-      `codigo.ilike.%${q}%,nombre.ilike.%${q}%,descripcion.ilike.%${q}%`
-    )
+export async function listCups(
+  filtros: CupsFiltros = {},
+  { page, pageSize }: CupsPaginacionParams = { page: 1, pageSize: 10 }
+): Promise<CupsListado> {
+  const consultarPagina = async (pagina: number): Promise<CupsListado> => {
+    let query = createAdminClient()
+      .from("cups")
+      .select(
+        `*, grupos_servicio(nombre), servicios(nombre, grupo_id)`,
+        { count: "exact" }
+      )
+      .order("codigo", { ascending: true })
+      .range((pagina - 1) * pageSize, pagina * pageSize - 1)
+
+    if (filtros.q) {
+      const q = escaparValorLike(filtros.q.trim())
+      if (q) {
+        query = query.or(
+          `codigo.ilike.%${q}%,nombre.ilike.%${q}%,descripcion.ilike.%${q}%`
+        )
+      }
+    }
+
+    if (filtros.grupo_id) {
+      query = query.eq("grupo_id", filtros.grupo_id)
+    }
+
+    if (filtros.servicio_id) {
+      query = query.eq("servicio_id", filtros.servicio_id)
+    }
+
+    if (filtros.capitulo) {
+      query = query.eq("capitulo", filtros.capitulo)
+    }
+
+    if (filtros.seccion) {
+      query = query.eq("seccion", filtros.seccion)
+    }
+
+    if (filtros.version) {
+      query = query.eq("version_resolucion", filtros.version)
+    }
+
+    if (filtros.activo !== undefined) {
+      query = query.eq("activo", filtros.activo)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) throw error
+
+    return {
+      rows: (data ?? []) as CupsRow[],
+      total: count ?? data?.length ?? 0,
+    }
   }
 
-  if (filtros.grupo_id) {
-    query = query.eq("grupo_id", filtros.grupo_id)
+  const resultado = await consultarPagina(page)
+
+  // Si los filtros redujeron el total y la URL apuntaba a una página ya
+  // inexistente, volvemos a la última página válida.
+  if (resultado.rows.length === 0 && page > 1) {
+    const totalPages = Math.max(1, Math.ceil(resultado.total / pageSize))
+    if (page > totalPages) return consultarPagina(totalPages)
   }
 
-  if (filtros.servicio_id) {
-    query = query.eq("servicio_id", filtros.servicio_id)
-  }
-
-  if (filtros.capitulo) {
-    query = query.eq("capitulo", filtros.capitulo)
-  }
-
-  if (filtros.seccion) {
-    query = query.eq("seccion", filtros.seccion)
-  }
-
-  if (filtros.version) {
-    query = query.eq("version_resolucion", filtros.version)
-  }
-
-  if (filtros.activo !== undefined) {
-    query = query.eq("activo", filtros.activo)
-  }
-
-  const { data, error } = await query
-
-  if (error) throw error
-
-  return (data ?? []) as CupsRow[]
+  return resultado
 }
 
 export async function getCups(id: string): Promise<CupsRow | null> {
@@ -179,6 +206,18 @@ export async function listServiciosPorGrupo(grupoId: string): Promise<ServicioOp
     .select("id, nombre, grupo_id")
     .eq("activo", true)
     .eq("grupo_id", grupoId)
+    .order("nombre", { ascending: true })
+
+  if (error) throw error
+
+  return (data ?? []) as ServicioOption[]
+}
+
+export async function listServiciosActivos(): Promise<ServicioOption[]> {
+  const { data, error } = await createAdminClient()
+    .from("servicios")
+    .select("id, nombre, grupo_id")
+    .eq("activo", true)
     .order("nombre", { ascending: true })
 
   if (error) throw error

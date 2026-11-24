@@ -90,6 +90,20 @@ export function puedeEscribirEnContratacion(rol: string): boolean {
   return puedeEditarContratacion(rol)
 }
 
+/**
+ * Direccionamiento comparte los roles de Contratación: quien puede ver
+ * contratos puede ver el direccionamiento de especialistas.
+ */
+export const ROLES_DIRECCIONAMIENTO = ROLES_CONTRATACION
+
+export function puedeAccederDireccionamiento(rol: string): boolean {
+  return puedeAccederContratacion(rol)
+}
+
+export function puedeEditarDireccionamiento(rol: string): boolean {
+  return puedeEditarContratacion(rol)
+}
+
 export function esGerenteRegional(rol: string): boolean {
   return rol === "gerente_regional"
 }

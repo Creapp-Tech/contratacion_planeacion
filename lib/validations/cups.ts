@@ -43,5 +43,13 @@ export const cupsSchema = z.object({
   activo: z.boolean().default(true),
 })
 
+// Edición inline: solo se permiten estos dos campos desde la tabla.
+export const cupsInlineSchema = z.object({
+  grupo_id: idOpcional,
+  servicio_id: idOpcional,
+})
+
+export type CupsInlineInput = z.input<typeof cupsInlineSchema>
+
 export type CupsInput = z.input<typeof cupsSchema>
 export type CupsOutput = z.output<typeof cupsSchema>

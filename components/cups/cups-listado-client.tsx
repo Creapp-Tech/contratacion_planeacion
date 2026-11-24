@@ -1,56 +1,79 @@
 "use client"
 
-import { useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { Card, CardContent } from "@/components/ui/card"
-import type { CupsRow } from "@/lib/cups/queries"
+import type {
+  CupsRow,
+  GrupoServicioOption,
+  ServicioOption,
+} from "@/lib/cups/queries"
 
 import { CupsPaginacion } from "./cups-paginacion"
 import { CupsTabla } from "./cups-tabla"
 
 type CupsListadoClientProps = {
   cups: CupsRow[]
+  total: number
+  page: number
+  pageSize: number
   filtrado?: boolean
+  grupos: GrupoServicioOption[]
+  servicios: ServicioOption[]
+  puedeEditar: boolean
 }
 
 export function CupsListadoClient({
   cups,
+  total,
+  page,
+  pageSize,
   filtrado = false,
+  grupos,
+  servicios,
+  puedeEditar,
 }: CupsListadoClientProps) {
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [cupsPrevios, setCupsPrevios] = useState(cups)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  // Al cambiar los datos (por ejemplo, al aplicar filtros) volvemos a la
-  // primera página para no quedar en una página fuera de rango.
-  if (cups !== cupsPrevios) {
-    setCupsPrevios(cups)
-    setPage(1)
+  function updateParams(next: Record<string, string | undefined>) {
+    const params = new URLSearchParams(searchParams.toString())
+    for (const [key, value] of Object.entries(next)) {
+      if (value) {
+        params.set(key, value)
+      } else {
+        params.delete(key)
+      }
+    }
+    router.replace(`${pathname}?${params.toString()}`)
   }
-
-  const total = cups.length
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const paginaActual = Math.min(page, totalPages)
-  const currentPageCups = cups.slice(
-    (paginaActual - 1) * pageSize,
-    paginaActual * pageSize
-  )
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
-        <CupsTabla cups={currentPageCups} filtrado={filtrado} />
+        <CupsTabla
+          cups={cups}
+          filtrado={filtrado}
+          grupos={grupos}
+          servicios={servicios}
+          puedeEditar={puedeEditar}
+        />
 
         {total > 0 ? (
           <CupsPaginacion
-            page={paginaActual}
+            page={page}
             pageSize={pageSize}
             total={total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
+            onPageChange={(next) =>
+              updateParams({ pagina: next > 1 ? String(next) : undefined })
+            }
+            onPageSizeChange={(size) =>
+              updateParams({
+                por_pagina: String(size),
+                pagina: undefined,
+              })
+            }
           />
         ) : null}
       </CardContent>

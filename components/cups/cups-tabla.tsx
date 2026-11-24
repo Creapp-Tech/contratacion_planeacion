@@ -1,21 +1,30 @@
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type {
+  CupsRow,
+  GrupoServicioOption,
+  ServicioOption,
+} from "@/lib/cups/queries"
 
-import { CupAcciones } from "./cups-acciones"
-import type { CupsRow } from "@/lib/cups/queries"
+import { CupFila } from "./cup-fila"
 
 export function CupsTabla({
   cups,
   filtrado = false,
+  grupos,
+  servicios,
+  puedeEditar,
 }: {
   cups: CupsRow[]
   filtrado?: boolean
+  grupos: GrupoServicioOption[]
+  servicios: ServicioOption[]
+  puedeEditar: boolean
 }) {
   if (cups.length === 0) {
     return (
@@ -33,8 +42,6 @@ export function CupsTabla({
         <TableRow>
           <TableHead>Código</TableHead>
           <TableHead>Nombre</TableHead>
-          <TableHead>Capítulo</TableHead>
-          <TableHead>Sección</TableHead>
           <TableHead>Grupo de servicio</TableHead>
           <TableHead>Servicio</TableHead>
           <TableHead>Versión resolución</TableHead>
@@ -43,31 +50,13 @@ export function CupsTabla({
       </TableHeader>
       <TableBody>
         {cups.map((cup) => (
-          <TableRow key={cup.id}>
-            <TableCell className="font-medium">{cup.codigo}</TableCell>
-            <TableCell>{cup.nombre}</TableCell>
-            <TableCell className="text-muted-foreground">
-              {cup.capitulo ?? "—"}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {cup.seccion ?? "—"}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {cup.grupos_servicio?.nombre ?? "—"}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {cup.servicios?.nombre ?? "—"}
-            </TableCell>
-            <TableCell>{cup.version_resolucion}</TableCell>
-            <TableCell>
-              <CupAcciones
-                id={cup.id}
-                nombre={cup.nombre}
-                codigo={cup.codigo}
-                activo={cup.activo}
-              />
-            </TableCell>
-          </TableRow>
+          <CupFila
+            key={cup.id}
+            cup={cup}
+            grupos={grupos}
+            servicios={servicios}
+            puedeEditar={puedeEditar}
+          />
         ))}
       </TableBody>
     </Table>

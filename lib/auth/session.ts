@@ -4,7 +4,9 @@ import { redirect } from "next/navigation"
 import {
   alcanceTotal,
   puedeAccederContratacion,
+  puedeAccederDireccionamiento,
   puedeAccederPlaneacion,
+  puedeEditarDireccionamiento,
   puedeEditarPlaneacion,
   puedeVerTodoModulos,
 } from "@/lib/constants/roles"
@@ -383,4 +385,64 @@ export async function puedeGestionarRegional(
   if (alcanceTotal(usuario.rol)) return true
   const propia = await regionalNombre(usuario.regional_id)
   return mismaRegional(propia, regionalObjetivo)
+}
+
+/** Guarda de acceso al módulo Direccionamiento ( lectura y escritura). */
+export async function requireAccesoDireccionamiento(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeAccederDireccionamiento(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/** Guarda de escritura en Direccionamiento. Rechaza a los roles de solo lectura. */
+export async function requireEditorDireccionamiento(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeEditarDireccionamiento(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/** Alcance regional del usuario para el módulo Direccionamiento. */
+export async function alcanceDireccionamiento(): Promise<AlcanceUsuario> {
+  const usuario = await requireAccesoDireccionamiento()
+  return alcanceDelUsuario(usuario)
 }

@@ -3,6 +3,8 @@ import {
   listCups,
   listGruposServicio,
   listOpcionesCups,
+  listServiciosActivos,
+  normalizarPaginacion,
 } from "@/lib/cups/queries"
 import { Card, CardContent } from "@/components/ui/card"
 import { CupsFiltros } from "./cups-filtros"
@@ -20,7 +22,8 @@ export async function CupsContenido({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireAccesoModulo()
+  const usuario = await requireAccesoModulo()
+  const puedeEditar = usuario.rol === "superadmin"
 
   const params = (await searchParams) ?? {}
   const filtros = {
@@ -31,11 +34,19 @@ export async function CupsContenido({
     servicio_id: pick(params.servicio),
   }
 
-  const [cups, grupos, opciones] = await Promise.all([
-    listCups(filtros),
+  const { page, pageSize } = normalizarPaginacion(
+    params.pagina,
+    params.por_pagina
+  )
+
+  const [listado, grupos, servicios, opciones] = await Promise.all([
+    listCups(filtros, { page, pageSize }),
     listGruposServicio(),
+    listServiciosActivos(),
     listOpcionesCups(),
   ])
+
+  const { rows: cups, total } = listado
 
   const hayFiltros = Boolean(
     filtros.q ||
@@ -63,13 +74,22 @@ export async function CupsContenido({
       </Card>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <CupsTarjetaTotal cups={cups.length} filtrado={hayFiltros} />
+        <CupsTarjetaTotal cups={total} filtrado={hayFiltros} />
         <SoloEscritura>
           <CupsHerramientas />
         </SoloEscritura>
       </div>
 
-      <CupsListadoClient cups={cups} filtrado={hayFiltros} />
+      <CupsListadoClient
+        cups={cups}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        filtrado={hayFiltros}
+        grupos={grupos}
+        servicios={servicios}
+        puedeEditar={puedeEditar}
+      />
     </div>
   )
 }

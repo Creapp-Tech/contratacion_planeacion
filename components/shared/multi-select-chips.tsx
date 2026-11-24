@@ -13,12 +13,14 @@ export function MultiSelectChips({
   value,
   onChange,
   disabled = false,
+  disabledValues = [],
   emptyMessage = "No hay opciones disponibles",
 }: {
   options: MultiSelectOption[]
   value: string[]
   onChange: (value: string[]) => void
   disabled?: boolean
+  disabledValues?: string[]
   emptyMessage?: string
 }) {
   if (options.length === 0) {
@@ -33,13 +35,14 @@ export function MultiSelectChips({
     <div role="group" className="flex flex-wrap gap-2">
       {options.map((option) => {
         const selected = seleccionados.has(option.value)
+        const bloqueada = disabled || disabledValues.includes(option.value)
         return (
           <button
             key={option.value}
             type="button"
             role="checkbox"
             aria-checked={selected}
-            disabled={disabled}
+            disabled={bloqueada}
             onClick={() =>
               onChange(
                 selected
