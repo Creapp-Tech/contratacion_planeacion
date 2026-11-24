@@ -1,7 +1,7 @@
 # AI Development Memory
 
 ## Last Updated
-2026-10-26
+2026-11-24
 
 ## Recent Patterns Learned
 - Modules should have: table listing + create button + CRUD operations
@@ -46,6 +46,11 @@
 - La UI de IPC usa tabs por URL (`?tab=analisis`), porque no existe un componente `Tabs` compartido. Los gráficos usan `recharts` (ya instalado).
 - En el formulario de IPC los contratos se agrupan por asegurador y los que no están en ejecución se muestran en naranja oscuro con la etiqueta "No ejecución".
 - El histórico nacional arranca vacío: debe cargarse manualmente desde Configuración antes de que existan comparaciones.
+- La migración `0048_aseguradores_contratos.sql` se aplicó en Supabase vía MCP el 2026-11-24: crea `public.servicios_cups_aseguradores` (FK a asegurador, contrato, CUPS y especialistas), índice único funcional por `(contrato_id, lower(trim(cups_asegurador)))`, trigger de integridad asegurador↔contrato, trigger de historial reutilizando `private.registrar_historial_direccionamiento`, RLS por contrato y seed idempotente del especialista `VIVA1A` (NIT).
+- El id del especialista VIVA1A se resuelve en código con `lib/aseguradores-contratos/queries.ts` (`idEspecialistaViva1a`), no se guarda como UUID fijo.
+- En `0048` se hizo `revoke all ... from anon` de forma explícita; la ANON no tiene privilegios sobre la tabla.
+- El módulo `/aseguradores-contratos` usa los mismos guards y helpers de permisos que Direccionamiento; la edición en línea y la barra masiva validan permisos fila por fila en servidor antes de escribir.
+- `npm run build` y `npx tsc --noEmit` pasan con el módulo nuevo; `npm run lint` reporta 20 errores preexistentes (`@typescript-eslint/no-explicit-any`) en otros archivos, ninguno del módulo nuevo.
 
 ## Pending Tasks
 - [ ] Probar manualmente el CRUD de contratos con los tres roles

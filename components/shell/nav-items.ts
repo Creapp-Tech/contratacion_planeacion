@@ -134,6 +134,12 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Network,
         roles: ROLES_DIRECCIONAMIENTO,
       },
+      {
+        title: "Aseguradores y Contratos",
+        href: "/aseguradores-contratos",
+        icon: FileSignature,
+        roles: ROLES_DIRECCIONAMIENTO,
+      },
     ],
   },
   {

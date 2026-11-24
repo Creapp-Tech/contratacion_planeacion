@@ -29,6 +29,12 @@ Next.js 16.4.0 with App Router, TypeScript, and shadcn/ui component library. Sup
   - `Seguimiento IPC` (`/ipc`) registra costo usuario, UPC contributivo, UPC subsidiado y % IPC por contrato y año (un registro por contrato+año), con tabs Resumen y Gráficas y análisis. Compara contra el IPC nacional de Colombia del mismo año y marca en rojo los valores por debajo. Incluye creación, edición y eliminación.
   - `IPC Nacional` (`/configuracion/ipc-nacional`, solo `superadmin`) administra el histórico por país y año (% IPC y valores de UPC contributivo y subsidiado); alimenta el comparativo.
   - Migraciones: `0018_modulo_contratos.sql`, `0022_contratos_campos_ampliados.sql`, `0023_agregar_categorias_contrato_adicionales.sql`, `0025_reconciliar_contratos.sql` (RLS endurecido y RPC transaccional de edición), `0026_duplicar_contrato.sql` y `0027_seguimiento_ipc.sql` + `0028_ipc_indices_created_by.sql` + `0029_ipc_seguimiento_upc.sql` + `0030_ipc_seguimiento_upc_subsidiado.sql` + `0031_ipc_nacional_upc_subsidiado.sql` + `0032_ipc_nacional_rename_upc_contributivo.sql`.
+- **Direccionamiento**: `/direccionamiento` (especialistas, contratos, servicios CUPS y sedes), migración `0045_modulo_direccionamiento.sql`.
+- **Aseguradores y Contratos**: `/aseguradores-contratos`, tabla global de servicios CUPS por asegurador/contrato con CME y opciones de direccionamiento, migración `0048_aseguradores_contratos.sql`.
+  - Especialista centinela `VIVA1A` (NIT) creado por la migración; su id se resuelve por consulta, nunca hardcodeado.
+  - Edición en línea de `cme_contratado`, `primera_opcion_especialista_id` y `segunda_opcion_especialista_id`, con acciones masivas sobre las opciones.
+  - Permisos idénticos a Direccionamiento; la regional se deriva del contrato (principal + `contrato_regionales`).
+  - `BuscadorCups` se reutiliza desde `components/direccionamiento/buscador-cups.tsx`.
 
 ## Conventions
 - All modules follow: **table + create button** pattern
