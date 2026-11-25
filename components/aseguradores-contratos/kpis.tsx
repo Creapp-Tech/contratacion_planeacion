@@ -47,7 +47,11 @@ export function KpisServicios({
         valor={numero(resumen.conCupsResolucion)}
         detalle="Referenciados al catálogo oficial"
       />
-      <Kpi titulo="CME promedio" valor={money(resumen.cmePromedio)} />
+      <Kpi
+        titulo="CME promedio"
+        valor={money(resumen.cmePromedio)}
+        detalle={`Sobre ${numero(resumen.conCme)} registros con CME`}
+      />
     </div>
   )
 }

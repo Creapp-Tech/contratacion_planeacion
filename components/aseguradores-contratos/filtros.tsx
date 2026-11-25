@@ -8,7 +8,7 @@ import type {
   AseguradoresContratosFiltros,
   OpcionesAseguradoresContratos,
 } from "@/lib/aseguradores-contratos/types"
-import { CLASE_SELECT } from "@/lib/direccionamiento/ui"
+import { CLASE_SELECT } from "@/lib/prestadores-contratos/ui"
 
 export function FiltrosServicios({
   filtros,
@@ -72,25 +72,6 @@ export function FiltrosServicios({
           {opciones.contratos.map((contrato) => (
             <option key={contrato.id} value={contrato.id}>
               {contrato.numero_contrato} · {contrato.nombre}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="f-opcion" className="text-xs font-medium text-muted-foreground">
-          Especialista (opción)
-        </label>
-        <select
-          id="f-opcion"
-          name="opcion"
-          defaultValue={filtros.opcionId ?? ""}
-          className={CLASE_SELECT}
-        >
-          <option value="">Todos</option>
-          {opciones.especialistas.map((especialista) => (
-            <option key={especialista.id} value={especialista.id}>
-              {especialista.numero_identificacion} · {especialista.nombre_completo}
             </option>
           ))}
         </select>

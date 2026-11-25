@@ -5,12 +5,15 @@ import { cn } from "cn"
 
 import { CargueMasivoContenido } from "@/components/contratos/cargue-masivo-contenido"
 import { buttonVariants } from "@/components/ui/button"
+import { requireEditorContratacion } from "@/lib/auth/session"
 
 export const metadata: Metadata = {
   title: "Cargue masivo de contratos",
 }
 
 export default async function CargueMasivoPage() {
+  await requireEditorContratacion()
+
   return (
     <div className="flex w-full flex-col gap-6">
       <Link

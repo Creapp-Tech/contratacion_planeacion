@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import {
   alcanceContratos,
-  requireAccesoContratacion,
+  requireEditorContratacion,
 } from "@/lib/auth/session"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
@@ -391,7 +391,7 @@ async function guardarRelaciones(
 export async function crearContrato(
   input: ContratoInput
 ): Promise<ContratoActionResult> {
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
 
   const parsed = contratoSchema.safeParse(input)
@@ -465,7 +465,7 @@ export async function actualizarContrato(
 ): Promise<ContratoActionResult> {
   if (!UUID_RE.test(id)) return { error: "El contrato no existe" }
 
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
 
   const parsed = contratoSchema.safeParse(input)
@@ -560,7 +560,7 @@ export async function duplicarContrato(
 ): Promise<DuplicarContratoResult> {
   if (!UUID_RE.test(id)) return { error: "El contrato no existe" }
 
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
 
   const admin = createAdminClient()
@@ -602,7 +602,7 @@ export async function eliminarContrato(
 ): Promise<ContratoActionResult> {
   if (!UUID_RE.test(id)) return { error: "El contrato no existe" }
 
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
 
   const admin = createAdminClient()
@@ -655,7 +655,7 @@ export async function crearDocumentoContrato(
   }
 ): Promise<CrearDocumentoResult> {
   if (!UUID_RE.test(contratoId)) return { error: "El contrato no existe" }
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
 
   // Validar acceso al contrato base

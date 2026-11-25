@@ -5,7 +5,6 @@ import { TAMANO_PAGINA, TAMANO_PAGINA_MAX } from "@/lib/aseguradores-contratos/c
 import type {
   AseguradoresContratosFiltros,
   ContratoOpcion,
-  EspecialistaOpcion,
   ListaResultado,
   OpcionesAseguradoresContratos,
   ResumenAseguradoresContratos,
@@ -26,7 +25,7 @@ type ContratoCrudo = {
 }
 
 const CAMPOS_SERVICIO =
-  "id, asegurador_id, contrato_id, cups_asegurador, cups_id, frecuencia_uso_contratada, cme_contratado, primera_opcion_especialista_id, segunda_opcion_especialista_id, created_by, updated_by, created_at, updated_at"
+  "id, asegurador_id, contrato_id, cups_asegurador, cups_id, frecuencia_uso_contratada, cme_contratado, created_by, updated_by, created_at, updated_at"
 
 const CAMPOS_CONTRATO =
   "id, asegurador_id, numero_contrato, nombre, estado, regionales!contratos_regional_id_fkey(nombre), contrato_regionales(regionales(nombre))"
@@ -178,33 +177,10 @@ async function idsFiltrados(
   if (filtros.cupsId && UUID_RE.test(filtros.cupsId)) {
     query = query.eq("cups_id", filtros.cupsId)
   }
-  if (filtros.opcionId && UUID_RE.test(filtros.opcionId)) {
-    query = query.or(
-      `primera_opcion_especialista_id.eq.${filtros.opcionId},segunda_opcion_especialista_id.eq.${filtros.opcionId}`
-    )
-  }
 
   const { data, error } = await query
   if (error) throw error
   return (data ?? []).map((fila) => fila.id as string)
-}
-
-async function getIdViva1a(admin: AdminClient): Promise<string | null> {
-  const { data, error } = await admin
-    .from("especialistas")
-    .select("id")
-    .eq("tipo_identificacion", "NIT")
-    .eq("estado", "activo")
-    .ilike("numero_identificacion", "VIVA1A")
-    .limit(1)
-    .maybeSingle()
-  if (error) throw error
-  return (data as { id: string } | null)?.id ?? null
-}
-
-/** El id del especialista centinela VIVA1A, resuelto desde la base de datos. */
-export async function idEspecialistaViva1a(): Promise<string | null> {
-  return getIdViva1a(createAdminClient())
 }
 
 async function mapearFilas(
@@ -220,38 +196,19 @@ async function mapearFilas(
   const idsCups = [
     ...new Set(filas.map((fila) => fila.cups_id).filter((id): id is string => Boolean(id))),
   ]
-  const idsEspecialistas = [
-    ...new Set(
-      filas.flatMap((fila) =>
-        [fila.primera_opcion_especialista_id, fila.segunda_opcion_especialista_id].filter(
-          (id): id is string => Boolean(id)
-        )
-      )
-    ),
-  ]
-
-  const [aseguradoresRes, contratos, cupsRes, especialistasRes, viva1aId] =
-    await Promise.all([
-      admin
-        .from("aseguradores_eps")
-        .select("id, nombre_eps")
-        .in("id", idsAseguradores),
-      contratosConRegionales(admin, idsContratos),
-      idsCups.length
-        ? admin.from("cups").select("id, codigo, nombre").in("id", idsCups)
-        : Promise.resolve({ data: [], error: null }),
-      idsEspecialistas.length
-        ? admin
-            .from("especialistas")
-            .select("id, numero_identificacion, nombre_completo")
-            .in("id", idsEspecialistas)
-        : Promise.resolve({ data: [], error: null }),
-      getIdViva1a(admin),
-    ])
+  const [aseguradoresRes, contratos, cupsRes] = await Promise.all([
+    admin
+      .from("aseguradores_eps")
+      .select("id, nombre_eps")
+      .in("id", idsAseguradores),
+    contratosConRegionales(admin, idsContratos),
+    idsCups.length
+      ? admin.from("cups").select("id, codigo, nombre").in("id", idsCups)
+      : Promise.resolve({ data: [], error: null }),
+  ])
 
   if (aseguradoresRes.error) throw aseguradoresRes.error
   if (cupsRes.error) throw cupsRes.error
-  if (especialistasRes.error) throw especialistasRes.error
 
   const aseguradores = new Map(
     (aseguradoresRes.data ?? []).map((fila) => [
@@ -272,18 +229,6 @@ async function mapearFilas(
       },
     ])
   )
-  const especialistas = new Map<string, EspecialistaOpcion>(
-    (especialistasRes.data ?? []).map((fila) => [
-      fila.id as string,
-      {
-        id: fila.id as string,
-        numero_identificacion: fila.numero_identificacion as string,
-        nombre_completo: fila.nombre_completo as string,
-        esViva1a: fila.id === viva1aId,
-      },
-    ])
-  )
-
   return filas.map((fila) => {
     const contrato = contratosMap.get(fila.contrato_id)
     const etiquetaContrato = contrato
@@ -298,12 +243,6 @@ async function mapearFilas(
       contrato: etiquetaContrato,
       contratoRegionales: contrato ? regionalesDeContrato(contrato) : [],
       cupsResolucion: fila.cups_id ? cups.get(fila.cups_id) ?? null : null,
-      primeraOpcion: fila.primera_opcion_especialista_id
-        ? especialistas.get(fila.primera_opcion_especialista_id) ?? null
-        : null,
-      segundaOpcion: fila.segunda_opcion_especialista_id
-        ? especialistas.get(fila.segunda_opcion_especialista_id) ?? null
-        : null,
     }
   })
 }
@@ -388,23 +327,16 @@ export async function regionalesDelContrato(
 
 export async function listOpcionesAseguradoresContratos(): Promise<OpcionesAseguradoresContratos> {
   const admin = createAdminClient()
-  const [aseguradoresRes, contratos, especialistasRes, viva1aId] = await Promise.all([
+  const [aseguradoresRes, contratos] = await Promise.all([
     admin
       .from("aseguradores_eps")
       .select("id, nombre_eps, estado")
       .eq("estado", "activo")
       .order("nombre_eps", { ascending: true }),
     contratosConRegionales(admin),
-    admin
-      .from("especialistas")
-      .select("id, numero_identificacion, nombre_completo, estado")
-      .eq("estado", "activo")
-      .order("nombre_completo", { ascending: true }),
-    getIdViva1a(admin),
   ])
 
   if (aseguradoresRes.error) throw aseguradoresRes.error
-  if (especialistasRes.error) throw especialistasRes.error
 
   const contratosOpcion: ContratoOpcion[] = contratos
     .map((contrato) => ({
@@ -422,23 +354,12 @@ export async function listOpcionesAseguradoresContratos(): Promise<OpcionesAsegu
       )
     )
 
-  const especialistas: EspecialistaOpcion[] = (
-    especialistasRes.data ?? []
-  ).map((fila) => ({
-    id: fila.id as string,
-    numero_identificacion: fila.numero_identificacion as string,
-    nombre_completo: fila.nombre_completo as string,
-    esViva1a: fila.id === viva1aId,
-  }))
-
   return {
     aseguradores: (aseguradoresRes.data ?? []).map((fila) => ({
       id: fila.id as string,
       nombre: fila.nombre_eps as string,
     })),
     contratos: contratosOpcion,
-    especialistas,
-    viva1aId,
   }
 }
 
@@ -451,6 +372,7 @@ export async function resumenServiciosCups(
     aseguradores: 0,
     conCupsResolucion: 0,
     cmePromedio: 0,
+    conCme: 0,
   }
   const admin = createAdminClient()
   const ids = await idsFiltrados(admin, {}, regional)
@@ -468,10 +390,13 @@ export async function resumenServiciosCups(
     asegurador_id: string
     contrato_id: string
     cups_id: string | null
-    cme_contratado: number | string
+    cme_contratado: number | string | null
   }[]
-  const totalCme = filas.reduce(
-    (suma, fila) => suma + Number(fila.cme_contratado || 0),
+  const conCme = filas.filter(
+    (fila) => fila.cme_contratado != null && fila.cme_contratado !== ""
+  )
+  const totalCme = conCme.reduce(
+    (suma, fila) => suma + Number(fila.cme_contratado),
     0
   )
 
@@ -480,6 +405,7 @@ export async function resumenServiciosCups(
     contratos: new Set(filas.map((fila) => fila.contrato_id)).size,
     aseguradores: new Set(filas.map((fila) => fila.asegurador_id)).size,
     conCupsResolucion: filas.filter((fila) => Boolean(fila.cups_id)).length,
-    cmePromedio: filas.length ? totalCme / filas.length : 0,
+    cmePromedio: conCme.length ? totalCme / conCme.length : 0,
+    conCme: conCme.length,
   }
 }

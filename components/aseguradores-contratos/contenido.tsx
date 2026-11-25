@@ -1,4 +1,4 @@
-import { alcanceDireccionamiento } from "@/lib/auth/session"
+import { alcancePrestadoresContratos } from "@/lib/auth/session"
 import {
   TAMANO_PAGINA,
   TAMANO_PAGINA_MAX,
@@ -25,6 +25,7 @@ const RESUMEN_VACIO: ResumenAseguradoresContratos = {
   aseguradores: 0,
   conCupsResolucion: 0,
   cmePromedio: 0,
+  conCme: 0,
 }
 
 function pick(value: string | string[] | undefined) {
@@ -46,7 +47,7 @@ export async function AseguradoresContratosContenido({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const [alcance, params] = await Promise.all([
-    alcanceDireccionamiento(),
+    alcancePrestadoresContratos(),
     searchParams,
   ])
 
@@ -59,7 +60,6 @@ export async function AseguradoresContratosContenido({
     q: pick(params.q),
     aseguradorId: pick(params.asegurador),
     contratoId: pick(params.contrato),
-    opcionId: pick(params.opcion),
     regional,
     page: pickNumero(params.page),
     pageSize: pickNumero(params.pageSize),
@@ -129,7 +129,6 @@ export async function AseguradoresContratosContenido({
         page={lista.page}
         pageSize={Math.min(lista.pageSize, TAMANO_PAGINA_MAX)}
         filtros={filtros}
-        opciones={opciones.especialistas}
         editables={editables}
       />
     </div>

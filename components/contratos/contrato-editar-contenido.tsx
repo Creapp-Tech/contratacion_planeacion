@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 
 import {
   alcanceContratos,
-  requireAccesoContratacion,
+  requireEditorContratacion,
 } from "@/lib/auth/session"
 import {
   getContrato,
@@ -18,7 +18,7 @@ export async function ContratoEditarContenido({
   params: Promise<{ id: string }>
   volverA?: string
 }) {
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
   const { id } = await params
 

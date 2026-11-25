@@ -4,17 +4,15 @@ import { Suspense } from "react"
 import { ArrowLeftIcon } from "lucide-react"
 import { cn } from "cn"
 
-import { ServicioCupsForm } from "@/components/aseguradores-contratos/servicio-cups-form"
+import { NuevoServicioContenido } from "@/components/aseguradores-contratos/nuevo-contenido"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { requireEditorDireccionamiento } from "@/lib/auth/session"
+import { requireEditorPrestadoresContratos } from "@/lib/auth/session"
 import { RUTA } from "@/lib/aseguradores-contratos/constantes"
 import { listOpcionesAseguradoresContratos } from "@/lib/aseguradores-contratos/queries"
 
@@ -40,24 +38,11 @@ function FormularioSkeleton() {
 }
 
 /** La sesión y las opciones se leen dentro del límite de Suspense de la página. */
-async function NuevoServicioContenido() {
-  await requireEditorDireccionamiento()
+async function ContenidoNuevoServicio() {
+  await requireEditorPrestadoresContratos()
   const opciones = await listOpcionesAseguradoresContratos()
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-heading">Nuevo servicio CUPS</CardTitle>
-        <CardDescription>
-          Registra el CUPS manejado por el asegurador, su contrato y el CME. Las
-          opciones de direccionamiento inician en VIVA1A.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ServicioCupsForm opciones={opciones} />
-      </CardContent>
-    </Card>
-  )
+  return <NuevoServicioContenido opciones={opciones} />
 }
 
 export default function NuevoServicioCupsPage() {
@@ -75,7 +60,7 @@ export default function NuevoServicioCupsPage() {
       </Link>
 
       <Suspense fallback={<FormularioSkeleton />}>
-        <NuevoServicioContenido />
+        <ContenidoNuevoServicio />
       </Suspense>
     </div>
   )

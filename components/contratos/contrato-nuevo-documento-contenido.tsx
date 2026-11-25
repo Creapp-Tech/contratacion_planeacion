@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import {
   alcanceContratos,
-  requireAccesoContratacion,
+  requireEditorContratacion,
 } from "@/lib/auth/session"
 import { getContrato, listOpcionesContrato } from "@/lib/contratos/queries"
 import { ContratoForm } from "./contrato-form"
@@ -11,7 +11,7 @@ export async function ContratoNuevoDocumentoContenido({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
   const { id } = await params
 

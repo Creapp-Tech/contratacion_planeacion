@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   alcanceContratos,
-  requireAccesoContratacion,
+  requireEditorContratacion,
 } from "@/lib/auth/session"
 import {
   RUTAS_CONTRATOS,
@@ -16,7 +16,7 @@ export async function ContratoNuevoContenido({
 }: {
   ambito?: AmbitoContratos
 } = {}) {
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireEditorContratacion()
   const alcance = alcanceContratos(usuario)
 
   if (!alcance.verTodo && !alcance.regionalId) {

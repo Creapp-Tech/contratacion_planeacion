@@ -2,10 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowDownUpIcon, PlusIcon } from "lucide-react"
 
-import {
-  alcanceContratos,
-  requireAccesoContratacion,
-} from "@/lib/auth/session"
+import { alcanceContratos, requireAccesoContratos } from "@/lib/auth/session"
 import {
   getContrato,
   listDocumentosContrato,
@@ -25,7 +22,7 @@ export async function ContratoDetalleContenido({
   params: Promise<{ id: string }>
   volverA?: string
 }) {
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireAccesoContratos()
   const alcance = alcanceContratos(usuario)
   const { id } = await params
 

@@ -4,10 +4,12 @@ import { redirect } from "next/navigation"
 import {
   alcanceTotal,
   puedeAccederContratacion,
-  puedeAccederDireccionamiento,
+  puedeAccederPrestadoresContratos,
   puedeAccederPlaneacion,
-  puedeEditarDireccionamiento,
+  puedeEditarContratacion,
+  puedeEditarPrestadoresContratos,
   puedeEditarPlaneacion,
+  puedeVerContratos,
   puedeVerTodoModulos,
 } from "@/lib/constants/roles"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -168,6 +170,63 @@ export async function requireAccesoContratacion(): Promise<CurrentUsuario> {
   }
 
   if (!puedeAccederContratacion(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/**
+ * Guarda de lectura de contratos e historial. Incluye a Jurídica, que ve todos
+ * los contratos pero no tiene acceso al resto del módulo de Contratación.
+ */
+export async function requireAccesoContratos(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeVerContratos(usuario.rol)) {
+    redirect("/")
+  }
+
+  return usuario
+}
+
+/** Guarda de escritura en contratos. Rechaza a Jurídica y a roles de solo lectura. */
+export async function requireEditorContratacion(): Promise<CurrentUsuario> {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    redirect("/login")
+  }
+
+  if (status === "sin_perfil") {
+    throw new PerfilError(
+      "No encontramos tu perfil de usuario. Contacta al administrador para que lo restablezca."
+    )
+  }
+
+  if (status === "inactivo" || !usuario) {
+    throw new PerfilError(
+      "Tu usuario está inactivo. Contacta al administrador para reactivarlo."
+    )
+  }
+
+  if (!puedeEditarContratacion(usuario.rol)) {
     redirect("/")
   }
 
@@ -387,8 +446,8 @@ export async function puedeGestionarRegional(
   return mismaRegional(propia, regionalObjetivo)
 }
 
-/** Guarda de acceso al módulo Direccionamiento ( lectura y escritura). */
-export async function requireAccesoDireccionamiento(): Promise<CurrentUsuario> {
+/** Guarda de acceso al módulo Prestadores y contratos ( lectura y escritura). */
+export async function requireAccesoPrestadoresContratos(): Promise<CurrentUsuario> {
   const { usuario, status } = await getCurrentUsuarioResult()
 
   if (status === "sin_sesion") {
@@ -407,15 +466,15 @@ export async function requireAccesoDireccionamiento(): Promise<CurrentUsuario> {
     )
   }
 
-  if (!puedeAccederDireccionamiento(usuario.rol)) {
+  if (!puedeAccederPrestadoresContratos(usuario.rol)) {
     redirect("/")
   }
 
   return usuario
 }
 
-/** Guarda de escritura en Direccionamiento. Rechaza a los roles de solo lectura. */
-export async function requireEditorDireccionamiento(): Promise<CurrentUsuario> {
+/** Guarda de escritura en PrestadoresContratos. Rechaza a los roles de solo lectura. */
+export async function requireEditorPrestadoresContratos(): Promise<CurrentUsuario> {
   const { usuario, status } = await getCurrentUsuarioResult()
 
   if (status === "sin_sesion") {
@@ -434,15 +493,15 @@ export async function requireEditorDireccionamiento(): Promise<CurrentUsuario> {
     )
   }
 
-  if (!puedeEditarDireccionamiento(usuario.rol)) {
+  if (!puedeEditarPrestadoresContratos(usuario.rol)) {
     redirect("/")
   }
 
   return usuario
 }
 
-/** Alcance regional del usuario para el módulo Direccionamiento. */
-export async function alcanceDireccionamiento(): Promise<AlcanceUsuario> {
-  const usuario = await requireAccesoDireccionamiento()
+/** Alcance regional del usuario para el módulo Prestadores y contratos. */
+export async function alcancePrestadoresContratos(): Promise<AlcanceUsuario> {
+  const usuario = await requireAccesoPrestadoresContratos()
   return alcanceDelUsuario(usuario)
 }

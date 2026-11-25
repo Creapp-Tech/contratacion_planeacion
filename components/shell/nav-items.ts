@@ -34,7 +34,8 @@ import {
 
 import {
   ROLES_CONTRATACION,
-  ROLES_DIRECCIONAMIENTO,
+  ROLES_LECTURA_CONTRATOS,
+  ROLES_PRESTADORES_CONTRATOS,
   ROLES_PLANEACION,
   puedeVerTodoModulos,
   type Rol,
@@ -97,13 +98,13 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Contratos nacionales",
         href: "/contratos",
         icon: FileSignature,
-        roles: ROLES_CONTRATACION,
+        roles: ROLES_LECTURA_CONTRATOS,
       },
       {
         title: "Contratos internacionales",
         href: "/contratos-internacionales",
         icon: Globe,
-        roles: ROLES_CONTRATACION,
+        roles: ROLES_LECTURA_CONTRATOS,
       },
       {
         title: "Dashboard de contratos",
@@ -115,7 +116,7 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Historial",
         href: "/historial",
         icon: History,
-        roles: ROLES_CONTRATACION,
+        roles: ROLES_LECTURA_CONTRATOS,
       },
       {
         title: "Seguimiento IPC",
@@ -126,19 +127,19 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Direccionamiento",
+    label: "Prestadores y contratos",
     items: [
       {
         title: "Especialistas y contratos",
-        href: "/direccionamiento",
+        href: "/prestadores-contratos",
         icon: Network,
-        roles: ROLES_DIRECCIONAMIENTO,
+        roles: ROLES_PRESTADORES_CONTRATOS,
       },
       {
         title: "Aseguradores y Contratos",
         href: "/aseguradores-contratos",
         icon: FileSignature,
-        roles: ROLES_DIRECCIONAMIENTO,
+        roles: ROLES_PRESTADORES_CONTRATOS,
       },
     ],
   },

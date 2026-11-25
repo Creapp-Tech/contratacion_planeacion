@@ -4,6 +4,8 @@ import { z } from "zod"
 import { contratoSchema } from "@/lib/validations/contrato"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { esRegionalNacional, MODALIDAD_VALUES } from "@/lib/contratos/constantes"
+import { getCurrentUsuarioResult } from "@/lib/auth/session"
+import { puedeEditarContratacion } from "@/lib/constants/roles"
 
 function filaAObjeto(fila: any[]): Record<string, any> {
   // Mapeo basado en la plantilla (encabezados de fila 1)
@@ -59,6 +61,16 @@ function parseFechaExcel(val: any): string | undefined {
 }
 
 export async function POST(req: NextRequest) {
+  const { usuario, status } = await getCurrentUsuarioResult()
+
+  if (status === "sin_sesion") {
+    return NextResponse.json({ error: "Inicia sesión para cargar contratos" }, { status: 401 })
+  }
+
+  if (status !== "ok" || !usuario || !puedeEditarContratacion(usuario.rol)) {
+    return NextResponse.json({ error: "No tienes permiso para crear contratos" }, { status: 403 })
+  }
+
   try {
     const formData = await req.formData()
     const archivo = formData.get("archivo") as File | null

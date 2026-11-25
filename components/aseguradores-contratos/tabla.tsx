@@ -1,15 +1,12 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import { cn } from "cn"
 
-import { BarraAccionesMasivas } from "./barra-acciones-masivas"
-import { CeldaCme, CeldaOpcion } from "./celda-editable"
+import { CeldaCme } from "./celda-editable"
 import { SoloEscritura } from "@/components/auth/permisos-provider"
 import { buttonVariants } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -18,14 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  CAMPO_PRIMERA_OPCION,
-  CAMPO_SEGUNDA_OPCION,
-  RUTA,
-} from "@/lib/aseguradores-contratos/constantes"
+import { RUTA } from "@/lib/aseguradores-contratos/constantes"
 import type {
   AseguradoresContratosFiltros,
-  EspecialistaOpcion,
   ServicioCupsListaFila,
 } from "@/lib/aseguradores-contratos/types"
 
@@ -33,12 +25,17 @@ function numero(value: number) {
   return new Intl.NumberFormat("es-CO").format(value)
 }
 
+function frecuencia(value: number | string) {
+  return new Intl.NumberFormat("es-CO", {
+    maximumFractionDigits: 8,
+  }).format(Number(value))
+}
+
 function queryParcial(filtros: AseguradoresContratosFiltros) {
   const params = new URLSearchParams()
   if (filtros.q) params.set("q", filtros.q)
   if (filtros.aseguradorId) params.set("asegurador", filtros.aseguradorId)
   if (filtros.contratoId) params.set("contrato", filtros.contratoId)
-  if (filtros.opcionId) params.set("opcion", filtros.opcionId)
   if (filtros.regional) params.set("regional", filtros.regional)
   return params
 }
@@ -61,7 +58,6 @@ export function TablaServiciosCups({
   page,
   pageSize,
   filtros,
-  opciones,
   editables,
 }: {
   filas: ServicioCupsListaFila[]
@@ -69,52 +65,14 @@ export function TablaServiciosCups({
   page: number
   pageSize: number
   filtros: AseguradoresContratosFiltros
-  opciones: EspecialistaOpcion[]
   editables: string[]
 }) {
-  const [seleccionados, setSeleccionados] = useState<string[]>([])
-  const seleccionables = filas.filter((fila) => editables.includes(fila.id))
-  const todosSeleccionados =
-    seleccionables.length > 0 &&
-    seleccionables.every((fila) => seleccionados.includes(fila.id))
-  const algunosSeleccionados = seleccionables.some((fila) =>
-    seleccionados.includes(fila.id)
-  )
-
-  function alternarTodos() {
-    if (todosSeleccionados) {
-      setSeleccionados((actuales) =>
-        actuales.filter(
-          (id) => !seleccionables.some((fila) => fila.id === id)
-        )
-      )
-      return
-    }
-    setSeleccionados((actuales) => [
-      ...new Set([...actuales, ...seleccionables.map((fila) => fila.id)]),
-    ])
-  }
-
-  function alternar(id: string) {
-    setSeleccionados((actuales) =>
-      actuales.includes(id)
-        ? actuales.filter((valor) => valor !== id)
-        : [...actuales, id]
-    )
-  }
-
   const totalPaginas = Math.max(1, Math.ceil(total / pageSize))
   const desde = total === 0 ? 0 : (page - 1) * pageSize + 1
   const hasta = Math.min(page * pageSize, total)
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraAccionesMasivas
-        seleccionados={seleccionados}
-        opciones={opciones}
-        onLimpiar={() => setSeleccionados([])}
-      />
-
       {filas.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
           No hay servicios CUPS que coincidan con los filtros.
@@ -124,28 +82,12 @@ export function TablaServiciosCups({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={todosSeleccionados}
-                    ref={(nodo) => {
-                      if (nodo) {
-                        nodo.indeterminate =
-                          algunosSeleccionados && !todosSeleccionados
-                      }
-                    }}
-                    onChange={alternarTodos}
-                    disabled={seleccionables.length === 0}
-                    aria-label="Seleccionar todos los servicios de esta página"
-                  />
-                </TableHead>
                 <TableHead>Asegurador</TableHead>
                 <TableHead>Contrato</TableHead>
                 <TableHead>CUPS asegurador</TableHead>
                 <TableHead>CUPS resolución</TableHead>
                 <TableHead className="text-right">Frecuencia</TableHead>
-                <TableHead>CME contratado</TableHead>
-                <TableHead>Primera opción</TableHead>
-                <TableHead>Segunda opción</TableHead>
+                <TableHead>CME Asegurador</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -154,14 +96,6 @@ export function TablaServiciosCups({
                 const puedeEditar = editables.includes(fila.id)
                 return (
                   <TableRow key={fila.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={seleccionados.includes(fila.id)}
-                        onChange={() => alternar(fila.id)}
-                        disabled={!puedeEditar}
-                        aria-label={`Seleccionar ${fila.cups_asegurador}`}
-                      />
-                    </TableCell>
                     <TableCell className="font-medium">{fila.asegurador}</TableCell>
                     <TableCell className="max-w-52 truncate text-muted-foreground" title={fila.contrato}>
                       {fila.contrato}
@@ -184,32 +118,12 @@ export function TablaServiciosCups({
                     <TableCell className="text-right tabular-nums">
                       {fila.frecuencia_uso_contratada == null
                         ? "—"
-                        : Number(fila.frecuencia_uso_contratada).toLocaleString("es-CO", {
-                            maximumFractionDigits: 2,
-                          })}
+                        : frecuencia(fila.frecuencia_uso_contratada)}
                     </TableCell>
                     <TableCell>
                       <CeldaCme
                         id={fila.id}
                         valor={fila.cme_contratado}
-                        puedeEditar={puedeEditar}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <CeldaOpcion
-                        id={fila.id}
-                        campo={CAMPO_PRIMERA_OPCION}
-                        valor={fila.primeraOpcion}
-                        opciones={opciones}
-                        puedeEditar={puedeEditar}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <CeldaOpcion
-                        id={fila.id}
-                        campo={CAMPO_SEGUNDA_OPCION}
-                        valor={fila.segundaOpcion}
-                        opciones={opciones}
                         puedeEditar={puedeEditar}
                       />
                     </TableCell>

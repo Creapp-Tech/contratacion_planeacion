@@ -37,8 +37,8 @@ export default function AseguradoresContratosPage({
             Aseguradores y Contratos
           </h1>
           <p className="text-sm text-muted-foreground">
-            Servicios CUPS contratados por asegurador, con CME y opciones de
-            direccionamiento.
+            Servicios CUPS contratados por asegurador, con frecuencia de uso y
+            CME por contrato.
           </p>
         </div>
         <SoloEscritura>

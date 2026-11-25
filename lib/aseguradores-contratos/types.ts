@@ -7,9 +7,7 @@ export type ServicioCupsRow = {
   cups_asegurador: string
   cups_id: string | null
   frecuencia_uso_contratada: number | string | null
-  cme_contratado: number | string
-  primera_opcion_especialista_id: string | null
-  segunda_opcion_especialista_id: string | null
+  cme_contratado: number | string | null
   created_by: string | null
   updated_by: string | null
   created_at: string
@@ -27,25 +25,14 @@ export type ContratoOpcion = {
   regionales: string[]
 }
 
-export type EspecialistaOpcion = {
-  id: string
-  numero_identificacion: string
-  nombre_completo: string
-  esViva1a: boolean
-}
-
 export type OpcionesAseguradoresContratos = {
   aseguradores: OpcionCatalogo[]
   contratos: ContratoOpcion[]
-  especialistas: EspecialistaOpcion[]
-  viva1aId: string | null
 }
 
 export const OPCIONES_VACIAS: OpcionesAseguradoresContratos = {
   aseguradores: [],
   contratos: [],
-  especialistas: [],
-  viva1aId: null,
 }
 
 export type ServicioCupsListaFila = ServicioCupsRow & {
@@ -53,8 +40,6 @@ export type ServicioCupsListaFila = ServicioCupsRow & {
   contrato: string
   contratoRegionales: string[]
   cupsResolucion: { id: string; codigo: string; nombre: string | null } | null
-  primeraOpcion: EspecialistaOpcion | null
-  segundaOpcion: EspecialistaOpcion | null
 }
 
 export type AseguradoresContratosFiltros = {
@@ -62,7 +47,6 @@ export type AseguradoresContratosFiltros = {
   aseguradorId?: string
   contratoId?: string
   cupsId?: string
-  opcionId?: string
   regional?: string
   page?: number
   pageSize?: number
@@ -81,4 +65,5 @@ export type ResumenAseguradoresContratos = {
   aseguradores: number
   conCupsResolucion: number
   cmePromedio: number
+  conCme: number
 }

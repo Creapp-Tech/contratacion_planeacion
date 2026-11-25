@@ -9,7 +9,7 @@ import {
   crearServicioCups,
   actualizarServicioCups,
 } from "@/app/(dashboard)/aseguradores-contratos/actions"
-import { BuscadorCups } from "@/components/direccionamiento/buscador-cups"
+import { BuscadorCups } from "@/components/prestadores-contratos/buscador-cups"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,38 +26,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { RUTA } from "@/lib/aseguradores-contratos/constantes"
 import type {
   OpcionesAseguradoresContratos,
   ServicioCupsListaFila,
 } from "@/lib/aseguradores-contratos/types"
-import { CLASE_SELECT } from "@/lib/direccionamiento/ui"
+import { CLASE_SELECT } from "@/lib/prestadores-contratos/ui"
 import {
   servicioCupsSchema,
   type ServicioCupsInput,
 } from "@/lib/validations/aseguradores-contratos"
 
-const SIN_ESPECIALISTA = "__none__"
-
 function texto(valor: unknown): string {
   return valor == null ? "" : String(valor)
-}
-
-function etiquetaEspecialista(
-  id: string,
-  opciones: OpcionesAseguradoresContratos
-) {
-  const especialista = opciones.especialistas.find((item) => item.id === id)
-  return especialista
-    ? `${especialista.numero_identificacion} · ${especialista.nombre_completo}`
-    : "Sin definir"
 }
 
 export function ServicioCupsForm({
@@ -78,8 +59,6 @@ export function ServicioCupsForm({
       (contrato) => contrato.asegurador_id === aseguradorInicial
     )?.id ??
     ""
-  const opcionPorDefecto = opciones.viva1aId ?? ""
-
   const valores: ServicioCupsInput = {
     asegurador_id: aseguradorInicial,
     contrato_id: contratoInicial,
@@ -87,10 +66,6 @@ export function ServicioCupsForm({
     cups_id: servicio?.cups_id ?? "",
     frecuencia_uso_contratada: texto(servicio?.frecuencia_uso_contratada ?? ""),
     cme_contratado: texto(servicio?.cme_contratado ?? ""),
-    primera_opcion_especialista_id:
-      servicio?.primera_opcion_especialista_id ?? opcionPorDefecto,
-    segunda_opcion_especialista_id:
-      servicio?.segunda_opcion_especialista_id ?? opcionPorDefecto,
   }
 
   const {
@@ -131,8 +106,8 @@ export function ServicioCupsForm({
           {servicio ? "Editar servicio CUPS" : "Nuevo servicio CUPS"}
         </CardTitle>
         <CardDescription>
-          Asocia el CUPS manejado por el asegurador con su contrato y define el
-          CME y las opciones de direccionamiento.
+          Asocia el CUPS manejado por el asegurador con su contrato y define la
+          frecuencia de uso y el CME.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -249,8 +224,8 @@ export function ServicioCupsForm({
                 id="frecuencia_uso_contratada"
                 type="number"
                 min="0"
-                step="0.01"
-                placeholder="Ej. 1.5"
+                step="any"
+                placeholder="Ej. 1.55555555"
                 aria-invalid={!!errors.frecuencia_uso_contratada}
                 {...register("frecuencia_uso_contratada")}
               />
@@ -258,7 +233,9 @@ export function ServicioCupsForm({
             </Field>
 
             <Field data-invalid={!!errors.cme_contratado}>
-              <FieldLabel htmlFor="cme_contratado">CME contratado</FieldLabel>
+              <FieldLabel htmlFor="cme_contratado">
+                CME Asegurador (opcional)
+              </FieldLabel>
               <Input
                 id="cme_contratado"
                 type="number"
@@ -269,82 +246,6 @@ export function ServicioCupsForm({
                 {...register("cme_contratado")}
               />
               <FieldError>{errors.cme_contratado?.message}</FieldError>
-            </Field>
-
-            <Field data-invalid={!!errors.primera_opcion_especialista_id}>
-              <FieldLabel>Primera opción (opcional)</FieldLabel>
-              <Controller
-                control={control}
-                name="primera_opcion_especialista_id"
-                render={({ field }) => (
-                  <Select
-                    value={texto(field.value) || SIN_ESPECIALISTA}
-                    onValueChange={(nuevo) =>
-                      field.onChange(nuevo === SIN_ESPECIALISTA ? "" : nuevo)
-                    }
-                  >
-                    <SelectTrigger className="w-full" aria-label="Primera opción">
-                      <SelectValue>
-                        {etiquetaEspecialista(texto(field.value), opciones)}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SIN_ESPECIALISTA}>Sin definir</SelectItem>
-                      {opciones.especialistas.map((especialista) => (
-                        <SelectItem key={especialista.id} value={especialista.id}>
-                          {especialista.numero_identificacion} ·{" "}
-                          {especialista.nombre_completo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <p className="text-xs text-muted-foreground">
-                {opciones.viva1aId
-                  ? `Por defecto: ${etiquetaEspecialista(
-                      opciones.viva1aId,
-                      opciones
-                    )}`
-                  : "No hay un especialista VIVA1A registrado."}
-              </p>
-              <FieldError>
-                {errors.primera_opcion_especialista_id?.message}
-              </FieldError>
-            </Field>
-
-            <Field data-invalid={!!errors.segunda_opcion_especialista_id}>
-              <FieldLabel>Segunda opción (opcional)</FieldLabel>
-              <Controller
-                control={control}
-                name="segunda_opcion_especialista_id"
-                render={({ field }) => (
-                  <Select
-                    value={texto(field.value) || SIN_ESPECIALISTA}
-                    onValueChange={(nuevo) =>
-                      field.onChange(nuevo === SIN_ESPECIALISTA ? "" : nuevo)
-                    }
-                  >
-                    <SelectTrigger className="w-full" aria-label="Segunda opción">
-                      <SelectValue>
-                        {etiquetaEspecialista(texto(field.value), opciones)}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SIN_ESPECIALISTA}>Sin definir</SelectItem>
-                      {opciones.especialistas.map((especialista) => (
-                        <SelectItem key={especialista.id} value={especialista.id}>
-                          {especialista.numero_identificacion} ·{" "}
-                          {especialista.nombre_completo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <FieldError>
-                {errors.segunda_opcion_especialista_id?.message}
-              </FieldError>
             </Field>
           </FieldGroup>
 

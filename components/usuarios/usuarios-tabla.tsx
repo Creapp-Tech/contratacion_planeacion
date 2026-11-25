@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { StandardTable, type ColumnDef } from "@/components/ui/standard-table"
-import { estadoLabel, rolLabel, puedeVerTodoModulos } from "@/lib/constants/roles"
+import { estadoLabel, rolLabel, puedeEscribirModulo } from "@/lib/constants/roles"
 import type { UsuarioRow } from "@/lib/usuarios/queries"
 
 export function UsuariosTabla({ usuarios }: { usuarios: UsuarioRow[] }) {
@@ -27,7 +27,7 @@ export function UsuariosTabla({ usuarios }: { usuarios: UsuarioRow[] }) {
       header: "Acciones",
       accessor: "actions",
       render: (_value, row) => {
-        const isReadOnlyRole = puedeVerTodoModulos(row.rol);
+        const isReadOnlyRole = !puedeEscribirModulo(row.rol);
         return (
           <div className="flex gap-2">
             {isReadOnlyRole ? (

@@ -7,6 +7,7 @@ export const ROLES = [
   { value: "director_nacional", label: "Director Nacional" },
   { value: "gerente_regional", label: "Gerente regional" },
   { value: "analista_contratacion", label: "Analista de contratación" },
+  { value: "juridica", label: "Jurídica" },
   { value: "profesional_planeacion", label: "Profesional de planeación" },
 ] as const
 
@@ -73,13 +74,34 @@ export const ROLES_CONTRATACION: Rol[] = [
   "gerente_nacional",
 ]
 
+/**
+ * Roles que pueden VER contratos. Jurídica se agrega aquí únicamente para
+ * contratos e historial: NO se agrega a ROLES_CONTRATACION para no habilitar
+ * IPC, Dashboard ni los módulos de Prestadores/Aseguradores.
+ */
+export const ROLES_LECTURA_CONTRATOS: Rol[] = [
+  ...ROLES_CONTRATACION,
+  "juridica",
+]
+
+export function puedeVerContratos(rol: string): boolean {
+  return (ROLES_LECTURA_CONTRATOS as readonly string[]).includes(rol)
+}
+
+/** Roles con acceso de solo lectura exclusivamente a contratos. */
+export const ROLES_SOLO_LECTURA_CONTRATOS: Rol[] = ["juridica"]
+
+function esSoloLecturaContratos(rol: string): boolean {
+  return (ROLES_SOLO_LECTURA_CONTRATOS as readonly string[]).includes(rol)
+}
+
 export function puedeAccederContratacion(rol: string): boolean {
   return (ROLES_CONTRATACION as readonly string[]).includes(rol)
 }
 
 export function puedeEditarContratacion(rol: string): boolean {
-  // Los roles de solo lectura pueden ver todo, pero no escribir.
-  if (puedeVerTodoModulos(rol)) {
+  // Los roles de solo lectura pueden ver todo (o solo contratos), pero no escribir.
+  if (puedeVerTodoModulos(rol) || esSoloLecturaContratos(rol)) {
     return false
   }
   return puedeAccederContratacion(rol)
@@ -91,16 +113,16 @@ export function puedeEscribirEnContratacion(rol: string): boolean {
 }
 
 /**
- * Direccionamiento comparte los roles de Contratación: quien puede ver
- * contratos puede ver el direccionamiento de especialistas.
+ * Prestadores y contratos comparte los roles de Contratación: quien puede ver
+ * contratos puede ver los contratos de prestadores.
  */
-export const ROLES_DIRECCIONAMIENTO = ROLES_CONTRATACION
+export const ROLES_PRESTADORES_CONTRATOS = ROLES_CONTRATACION
 
-export function puedeAccederDireccionamiento(rol: string): boolean {
+export function puedeAccederPrestadoresContratos(rol: string): boolean {
   return puedeAccederContratacion(rol)
 }
 
-export function puedeEditarDireccionamiento(rol: string): boolean {
+export function puedeEditarPrestadoresContratos(rol: string): boolean {
   return puedeEditarContratacion(rol)
 }
 
@@ -126,7 +148,7 @@ export function puedeEditarPlaneacion(rol: string): boolean {
  * siempre se valida en el servidor con los guards de cada módulo.
  */
 export function puedeEscribirModulo(rol: string): boolean {
-  return !puedeVerTodoModulos(rol)
+  return !puedeVerTodoModulos(rol) && !esSoloLecturaContratos(rol)
 }
 
 export const ESTADOS = [

@@ -1,7 +1,4 @@
-import {
-  alcanceContratos,
-  requireAccesoContratacion,
-} from "@/lib/auth/session"
+import { alcanceContratos, requireAccesoContratos } from "@/lib/auth/session"
 import {
   RUTAS_CONTRATOS,
   type AmbitoContratos,
@@ -47,7 +44,7 @@ export async function ContratosContenido({
   vista?: VistaContratos
   ambito?: AmbitoContratos
 }) {
-  const usuario = await requireAccesoContratacion()
+  const usuario = await requireAccesoContratos()
   const alcance = alcanceContratos(usuario)
   const params = await searchParams
   const vigencia = pickVigencia(params.vigencia)

@@ -17,7 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   alcanceDelUsuario,
-  requireEditorDireccionamiento,
+  requireEditorPrestadoresContratos,
 } from "@/lib/auth/session"
 import { RUTA } from "@/lib/aseguradores-contratos/constantes"
 import { puedeEditarServicioAsegurador } from "@/lib/aseguradores-contratos/permisos"
@@ -55,7 +55,7 @@ function FormularioSkeleton() {
 /** Params, sesión y datos se resuelven dentro del límite de Suspense. */
 async function EditarContenido({ params }: EditarPageProps) {
   const { id } = await params
-  const usuario = await requireEditorDireccionamiento()
+  const usuario = await requireEditorPrestadoresContratos()
   const [servicio, opciones, alcance] = await Promise.all([
     getServicioCups(id),
     listOpcionesAseguradoresContratos(),
@@ -94,8 +94,8 @@ async function EditarContenido({ params }: EditarPageProps) {
         <CardHeader>
           <CardTitle className="font-heading">Editar servicio CUPS</CardTitle>
           <CardDescription>
-            Actualiza el CUPS, la frecuencia, el CME y las opciones de
-            direccionamiento. El historial conserva los cambios anteriores.
+            Actualiza el CUPS, la frecuencia de uso y el CME. El historial
+            conserva los cambios anteriores.
           </CardDescription>
         </CardHeader>
         <CardContent>

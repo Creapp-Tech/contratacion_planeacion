@@ -1,10 +1,10 @@
 import {
-  puedeEditarRegistroDireccionamiento,
-  puedeVerRegistroDireccionamiento,
-} from "@/lib/direccionamiento/permisos"
+  puedeEditarRegistroPrestadoresContratos,
+  puedeVerRegistroPrestadoresContratos,
+} from "@/lib/prestadores-contratos/permisos"
 
 /**
- * Los permisos son idénticos a Direccionamiento. La regional del registro se
+ * Los permisos son idénticos a PrestadoresContratos. La regional del registro se
  * deriva del contrato (regional principal + regionales adicionales).
  */
 export function puedeVerServicioAsegurador(
@@ -14,7 +14,7 @@ export function puedeVerServicioAsegurador(
   createdBy?: string | null,
   usuarioId?: string | null
 ): boolean {
-  return puedeVerRegistroDireccionamiento(
+  return puedeVerRegistroPrestadoresContratos(
     rol,
     regionalUsuario,
     regionalesContrato,
@@ -30,7 +30,7 @@ export function puedeEditarServicioAsegurador(
   createdBy?: string | null,
   usuarioId?: string | null
 ): boolean {
-  return puedeEditarRegistroDireccionamiento(
+  return puedeEditarRegistroPrestadoresContratos(
     rol,
     regionalUsuario,
     regionalesContrato,

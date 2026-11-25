@@ -1,34 +1,34 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 
 import {
   alcanceDelUsuario,
-  requireAccesoDireccionamiento,
-  requireEditorDireccionamiento,
+  requireAccesoPrestadoresContratos,
+  requireEditorPrestadoresContratos,
   type CurrentUsuario,
 } from "@/lib/auth/session"
-import {
-  CAMPO_CME,
-  RUTA,
-} from "@/lib/aseguradores-contratos/constantes"
+import { RUTA } from "@/lib/aseguradores-contratos/constantes"
 import { puedeEditarServicioAsegurador } from "@/lib/aseguradores-contratos/permisos"
 import {
   getServicioParaPermisos,
   regionalesDelContrato,
 } from "@/lib/aseguradores-contratos/queries"
+import {
+  claveCups,
+  mapearFila,
+  type FilaImportacion,
+} from "@/lib/aseguradores-contratos/importar"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
-  cambioMasivoSchema,
   editarCmeSchema,
-  editarOpcionSchema,
   servicioCupsSchema,
-  type CambioMasivoInput,
   type ServicioCupsInput,
 } from "@/lib/validations/aseguradores-contratos"
 
 export type AccionServicioResultado =
-  | { success: true; id?: string; actualizados?: number }
+  | { success: true; id: string }
   | { error: string }
 
 type SupabaseError = {
@@ -92,7 +92,7 @@ async function puedeEditar(
 export async function crearServicioCups(
   values: ServicioCupsInput
 ): Promise<AccionServicioResultado> {
-  const usuario = await requireEditorDireccionamiento()
+  const usuario = await requireEditorPrestadoresContratos()
 
   const parseado = servicioCupsSchema.safeParse(values)
   if (!parseado.success) return { error: primerError(parseado.error) }
@@ -117,8 +117,6 @@ export async function crearServicioCups(
       cups_id: datos.cups_id,
       frecuencia_uso_contratada: datos.frecuencia_uso_contratada,
       cme_contratado: datos.cme_contratado,
-      primera_opcion_especialista_id: datos.primera_opcion_especialista_id,
-      segunda_opcion_especialista_id: datos.segunda_opcion_especialista_id,
       created_by: usuario.id,
       updated_by: usuario.id,
     })
@@ -134,7 +132,7 @@ export async function actualizarServicioCups(
   id: string,
   values: ServicioCupsInput
 ): Promise<AccionServicioResultado> {
-  const usuario = await requireEditorDireccionamiento()
+  const usuario = await requireEditorPrestadoresContratos()
 
   const parseado = servicioCupsSchema.safeParse(values)
   if (!parseado.success) return { error: primerError(parseado.error) }
@@ -165,8 +163,6 @@ export async function actualizarServicioCups(
       cups_id: datos.cups_id,
       frecuencia_uso_contratada: datos.frecuencia_uso_contratada,
       cme_contratado: datos.cme_contratado,
-      primera_opcion_especialista_id: datos.primera_opcion_especialista_id,
-      segunda_opcion_especialista_id: datos.segunda_opcion_especialista_id,
       updated_by: usuario.id,
     })
     .eq("id", id)
@@ -176,12 +172,11 @@ export async function actualizarServicioCups(
   return { success: true, id }
 }
 
-export async function actualizarCeldaServicio(
+export async function actualizarCmeServicio(
   id: string,
-  campo: string,
-  valor: string | number | null
+  valor: string | number
 ): Promise<AccionServicioResultado> {
-  const usuario = await requireEditorDireccionamiento()
+  const usuario = await requireEditorPrestadoresContratos()
 
   const registro = await getServicioParaPermisos(id)
   if (!registro) return { error: "No se encontró el servicio CUPS." }
@@ -189,24 +184,15 @@ export async function actualizarCeldaServicio(
     return { error: "No tienes permiso para editar este servicio CUPS." }
   }
 
-  let cambios: Record<string, unknown>
-  if (campo === CAMPO_CME) {
-    const parseado = editarCmeSchema.safeParse({ id, cme_contratado: valor })
-    if (!parseado.success) return { error: primerError(parseado.error) }
-    cambios = { cme_contratado: parseado.data.cme_contratado }
-  } else {
-    const parseado = editarOpcionSchema.safeParse({
-      id,
-      campo: campo as CambioMasivoInput["campo"],
-      especialista_id: valor,
-    })
-    if (!parseado.success) return { error: primerError(parseado.error) }
-    cambios = { [parseado.data.campo]: parseado.data.especialista_id }
-  }
+  const parseado = editarCmeSchema.safeParse({ id, cme_contratado: valor })
+  if (!parseado.success) return { error: primerError(parseado.error) }
 
   const { error } = await createAdminClient()
     .from("servicios_cups_aseguradores")
-    .update({ ...cambios, updated_by: usuario.id })
+    .update({
+      cme_contratado: parseado.data.cme_contratado,
+      updated_by: usuario.id,
+    })
     .eq("id", id)
 
   if (error) return { error: mensajeError(error) }
@@ -214,78 +200,10 @@ export async function actualizarCeldaServicio(
   return { success: true, id }
 }
 
-export async function aplicarCambioMasivo(
-  ids: string[],
-  campo: string,
-  especialistaId: string | null
-): Promise<AccionServicioResultado> {
-  const usuario = await requireEditorDireccionamiento()
-
-  const datos: CambioMasivoInput = {
-    ids,
-    campo: campo as CambioMasivoInput["campo"],
-    especialista_id: especialistaId,
-  }
-  const parseado = cambioMasivoSchema.safeParse(datos)
-  if (!parseado.success) return { error: primerError(parseado.error) }
-
-  const unicos = [...new Set(parseado.data.ids)]
-  const { data: registros, error: errorRegistros } = await createAdminClient()
-    .from("servicios_cups_aseguradores")
-    .select("id, contrato_id, created_by")
-    .in("id", unicos)
-
-  if (errorRegistros) return { error: mensajeError(errorRegistros) }
-  const filas = (registros ?? []) as {
-    id: string
-    contrato_id: string
-    created_by: string | null
-  }[]
-  if (filas.length !== unicos.length) {
-    return { error: "Uno de los servicios seleccionados ya no existe." }
-  }
-
-  const contratos = [...new Set(filas.map((fila) => fila.contrato_id))]
-  const regionalesPorContrato = new Map<string, string[]>()
-  await Promise.all(
-    contratos.map(async (contratoId) => {
-      regionalesPorContrato.set(contratoId, await regionalesDelContrato(contratoId))
-    })
-  )
-  const alcance = await alcanceDelUsuario(usuario)
-
-  const sinPermiso = filas.some(
-    (fila) =>
-      !puedeEditarServicioAsegurador(
-        usuario.rol,
-        alcance.regional,
-        regionalesPorContrato.get(fila.contrato_id) ?? [],
-        fila.created_by,
-        usuario.id
-      )
-  )
-  if (sinPermiso) {
-    return { error: "No tienes permiso para editar todos los servicios seleccionados." }
-  }
-
-  const { data, error } = await createAdminClient()
-    .from("servicios_cups_aseguradores")
-    .update({
-      [parseado.data.campo]: parseado.data.especialista_id,
-      updated_by: usuario.id,
-    })
-    .in("id", unicos)
-    .select("id")
-
-  if (error) return { error: mensajeError(error) }
-  revalidar()
-  return { success: true, actualizados: (data ?? []).length }
-}
-
 export async function eliminarServicioCups(
   id: string
 ): Promise<AccionServicioResultado> {
-  const usuario = await requireEditorDireccionamiento()
+  const usuario = await requireEditorPrestadoresContratos()
   if (usuario.rol !== "superadmin") {
     return { error: "Solo un superadministrador puede eliminar servicios CUPS." }
   }
@@ -303,7 +221,261 @@ export async function eliminarServicioCups(
   return { success: true, id }
 }
 
-/** Expuesto para el panel: la lectura usa el mismo guard que Direccionamiento. */
+export type ImportarServiciosCupsResultado = {
+  creados: number
+  rechazados: { fila: number; motivo: string }[]
+}
+
+type RegistroImportado = {
+  fila: number
+  values: {
+    asegurador_id: string
+    contrato_id: string
+    cups_asegurador: string
+    cups_id: string
+    frecuencia_uso_contratada: number | null
+    cme_contratado: number | null
+  }
+}
+
+type FilaRechazada = { fila: number; motivo: string }
+
+const MAX_FILAS_IMPORTACION = 5000
+const TAMANO_LOTE = 200
+
+async function indiceCupsHomologos(
+  codigos: string[]
+): Promise<Map<string, string>> {
+  const indice = new Map<string, string>()
+  const admin = createAdminClient()
+
+  for (let i = 0; i < codigos.length; i += 100) {
+    const lote = Array.from(new Set(codigos.slice(i, i + 100)))
+    const { data, error } = await admin
+      .from("cups")
+      .select("id,codigo,activo")
+      .in("codigo", lote)
+      .order("activo", { ascending: false })
+    if (error) throw error
+
+    for (const fila of (data ?? []) as {
+      id: string
+      codigo: string
+    }[]) {
+      const codigo = fila.codigo.trim().toLowerCase()
+      if (!indice.has(codigo)) indice.set(codigo, fila.id)
+    }
+  }
+
+  return indice
+}
+
+async function clavesCupsDelContrato(contratoId: string): Promise<Set<string>> {
+  const claves = new Set<string>()
+  const admin = createAdminClient()
+  const tamano = 1000
+
+  for (let desde = 0; ; desde += tamano) {
+    const { data, error } = await admin
+      .from("servicios_cups_aseguradores")
+      .select("cups_asegurador")
+      .eq("contrato_id", contratoId)
+      .order("created_at", { ascending: true })
+      .range(desde, desde + tamano - 1)
+    if (error) throw error
+
+    const filas = (data ?? []) as { cups_asegurador: string }[]
+    for (const fila of filas) claves.add(claveCups(fila.cups_asegurador))
+    if (filas.length < tamano) break
+  }
+
+  return claves
+}
+
+async function insertarRegistros(
+  registros: RegistroImportado[],
+  rechazados: FilaRechazada[],
+  usuarioId: string
+): Promise<number> {
+  const admin = createAdminClient()
+  let creados = 0
+
+  for (let i = 0; i < registros.length; i += TAMANO_LOTE) {
+    const lote = registros.slice(i, i + TAMANO_LOTE)
+    const payload = lote.map((registro) => ({
+      ...registro.values,
+      created_by: usuarioId,
+      updated_by: usuarioId,
+    }))
+
+    const { error } = await admin
+      .from("servicios_cups_aseguradores")
+      .insert(payload)
+
+    if (!error) {
+      creados += lote.length
+      continue
+    }
+    if (error.code !== "23505") throw new Error(mensajeError(error))
+
+    // Si el lote falla por duplicados, se inserta fila por fila para aislarlos.
+    for (const registro of lote) {
+      const { error: errorFila } = await admin
+        .from("servicios_cups_aseguradores")
+        .insert({
+          ...registro.values,
+          created_by: usuarioId,
+          updated_by: usuarioId,
+        })
+      if (errorFila) {
+        if (errorFila.code !== "23505") {
+          throw new Error(mensajeError(errorFila))
+        }
+        rechazados.push({
+          fila: registro.fila,
+          motivo: mensajeError(errorFila),
+        })
+      } else {
+        creados++
+      }
+    }
+  }
+
+  return creados
+}
+
+export async function importarServiciosCups(
+  aseguradorId: string,
+  contratoId: string,
+  filas: FilaImportacion[]
+): Promise<ImportarServiciosCupsResultado | { error: string }> {
+  const usuario = await requireEditorPrestadoresContratos()
+
+  const uuid = z.string().uuid()
+  if (
+    !uuid.safeParse(aseguradorId).success ||
+    !uuid.safeParse(contratoId).success
+  ) {
+    return { error: "Selecciona un asegurador y un contrato válidos." }
+  }
+  if (!Array.isArray(filas) || filas.length === 0) {
+    return { error: "El archivo no contiene filas de datos." }
+  }
+  if (filas.length > MAX_FILAS_IMPORTACION) {
+    return {
+      error: `El archivo supera el máximo de ${MAX_FILAS_IMPORTACION} filas.`,
+    }
+  }
+
+  const asegurador = await aseguradorDelContrato(contratoId)
+  if (!asegurador) return { error: "No se encontró el contrato seleccionado." }
+  if (asegurador !== aseguradorId) {
+    return { error: "El contrato seleccionado no pertenece al asegurador indicado." }
+  }
+  if (!(await puedeEditar(usuario, contratoId))) {
+    return { error: "No tienes permiso para gestionar este contrato." }
+  }
+
+  const mapeadas = filas.map(mapearFila)
+  const codigos = mapeadas
+    .map((fila) => fila.cups_homologo)
+    .filter((codigo): codigo is string => Boolean(codigo))
+
+  let indice: Map<string, string>
+  let existentes: Set<string>
+  try {
+    ;[indice, existentes] = await Promise.all([
+      indiceCupsHomologos(codigos),
+      clavesCupsDelContrato(contratoId),
+    ])
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo consultar el catálogo CUPS o el contrato.",
+    }
+  }
+
+  const rechazados: FilaRechazada[] = []
+  const vistos = new Set<string>()
+  const registros: RegistroImportado[] = []
+
+  mapeadas.forEach((fila, index) => {
+    const numeroFila = index + 2
+
+    if (!fila.cups_asegurador) {
+      rechazados.push({ fila: numeroFila, motivo: "Falta el CUPS asegurador" })
+      return
+    }
+    if (!fila.cups_homologo) {
+      rechazados.push({ fila: numeroFila, motivo: "Falta el CUPS homologado" })
+      return
+    }
+
+    const cupsId = indice.get(fila.cups_homologo.trim().toLowerCase())
+    if (!cupsId) {
+      rechazados.push({
+        fila: numeroFila,
+        motivo: "El CUPS homologado no existe en el catálogo",
+      })
+      return
+    }
+
+    const parseado = servicioCupsSchema.safeParse({
+      asegurador_id: aseguradorId,
+      contrato_id: contratoId,
+      cups_asegurador: fila.cups_asegurador,
+      cups_id: cupsId,
+      frecuencia_uso_contratada: fila.frecuencia_uso_contratada,
+      cme_contratado: fila.cme_contratado,
+    })
+    if (!parseado.success) {
+      rechazados.push({ fila: numeroFila, motivo: primerError(parseado.error) })
+      return
+    }
+
+    const clave = claveCups(parseado.data.cups_asegurador)
+    if (vistos.has(clave) || existentes.has(clave)) {
+      rechazados.push({
+        fila: numeroFila,
+        motivo: "Ya existe un servicio con ese CUPS asegurador en el contrato",
+      })
+      return
+    }
+    vistos.add(clave)
+
+    registros.push({
+      fila: numeroFila,
+      values: {
+        asegurador_id: parseado.data.asegurador_id,
+        contrato_id: parseado.data.contrato_id,
+        cups_asegurador: parseado.data.cups_asegurador,
+        cups_id: parseado.data.cups_id as string,
+        frecuencia_uso_contratada: parseado.data.frecuencia_uso_contratada,
+        cme_contratado: parseado.data.cme_contratado,
+      },
+    })
+  })
+
+  if (registros.length === 0) return { creados: 0, rechazados }
+
+  let creados: number
+  try {
+    creados = await insertarRegistros(registros, rechazados, usuario.id)
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudieron guardar los servicios CUPS.",
+    }
+  }
+  revalidar()
+  return { creados, rechazados }
+}
+
+/** Expuesto para el panel: la lectura usa el mismo guard que PrestadoresContratos. */
 export async function verificarAcceso(): Promise<void> {
-  await requireAccesoDireccionamiento()
+  await requireAccesoPrestadoresContratos()
 }
