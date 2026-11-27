@@ -57,7 +57,7 @@ export interface NavGroup {
 // Solo módulos del admin panel actual
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Planeación",
+    label: "Capacidad instalada",
     items: [
       {
         title: "Sedes",
@@ -81,6 +81,23 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "Población",
         href: "/poblaciones",
         icon: Users,
+        roles: ROLES_PLANEACION,
+      },
+    ],
+  },
+  {
+    label: "Planeación",
+    items: [
+      {
+        title: "Infraestructura y Personal",
+        href: "/infraestructura-personal",
+        icon: Building2,
+        roles: ROLES_PLANEACION,
+      },
+      {
+        title: "Indicadores y Reglas",
+        href: "/indicadores-reglas",
+        icon: ListChecks,
         roles: ROLES_PLANEACION,
       },
       {

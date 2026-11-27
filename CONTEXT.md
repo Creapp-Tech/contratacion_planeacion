@@ -18,7 +18,8 @@ Next.js 16.4.0 with App Router, TypeScript, and shadcn/ui component library. Sup
 - Database-first approach: types generated from Supabase schema
 
 ## Modules
-- **Planeación**: sedes, mapa de sedes, capacidad instalada, poblaciones, frecuencias.
+- **Capacidad instalada**: sedes, mapa de sedes, capacidad instalada, poblaciones.
+- **Planeación**: infraestructura y personal (en construcción), indicadores y reglas (en construcción), frecuencias de uso.
 - **Contratación**: contratos (`/contratos`), historial (`/historial`) y seguimiento IPC (`/ipc`).
   - Roles: `superadmin`, `analista_contratacion`, `gerente_regional` y `juridica` (solo lectura de contratos e historial en todas las regionales; sin Dashboard, IPC ni Prestadores/Aseguradores). Los roles de lectura total (`ceo`, `cfo`, `gerente_general`, `gerente_nacional`) también pueden ver contratos.
   - Gerente regional limitado a contratos de su `regional_id`.
